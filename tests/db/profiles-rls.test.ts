@@ -114,7 +114,9 @@ describe("audit logs", () => {
   it("records the acting profile and role server-side", async () => {
     await asUser(pool, admin, async (s) => {
       await s.query("select public.log_audit_event('vendor.approved', 'vendor', 'v-1', '{\"note\":\"ok\"}')");
-      const row = await s.one("select actor_id, actor_role, action, entity_id, metadata from public.audit_logs");
+      const row = await s.one(
+        "select actor_id, actor_role, action, entity_id, metadata from public.audit_logs where entity_id = 'v-1'",
+      );
       expect(row).toEqual({
         actor_id: admin.profileId,
         actor_role: "admin",

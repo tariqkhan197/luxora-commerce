@@ -18,19 +18,20 @@ PostgreSQL (Supabase). Migrations in `supabase/migrations/`, applied in filename
 
 ## Migrations
 
-| File                                | Contents                                                                                                                                                                                                            |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0001_foundation_extensions_enums`  | Extensions, all enums, domains, `set_updated_at()`                                                                                                                                                                  |
-| `0002_identity_security`            | `roles`, `profiles`, auth trigger, RLS helpers, `platform_settings`, `audit_logs` + `log_audit_event()`                                                                                                             |
-| `0003_vendors`                      | `vendors`, `vendor_users`, `vendor_applications`, `stores`, membership helpers, locked-column trigger                                                                                                               |
-| `0004_catalog_inventory`            | `categories`, `brands`, `products`, `product_variants`, `product_images`, `collections`, `collection_products`, `inventory`, `inventory_movements`, safe inventory functions                                        |
-| `0005_customer_data`                | `addresses`, `carts`, `cart_items`, `wishlists`, `wishlist_items`                                                                                                                                                   |
-| `0006_orders_payments`              | `orders`, `vendor_orders`, `order_items`, `payments`, `payment_transactions`, `returns`, `refunds`, order number generator                                                                                          |
-| `0007_reviews_promotions`           | `reviews`, `review_images`, `coupons`, `coupon_usages`, `flash_sales`, `flash_sale_items`                                                                                                                           |
-| `0008_finance_monetization`         | `commission_rules`, `commissions`, `payouts`, `payout_items`, `subscription_plans`, `vendor_subscriptions`, `featured_products`, `featured_brands`, `resolve_commission_rate_bps()`, `calculate_commission_minor()` |
-| `0009_engagement_content_analytics` | `loyalty_accounts`, `loyalty_transactions`, `notifications`, `content_sections`, `banners`, `analytics_events`                                                                                                      |
-| `0010_storage`                      | Buckets and `storage.objects` policies                                                                                                                                                                              |
-| `0011_grants`                       | Explicit privileges for `anon`, `authenticated`, `service_role`                                                                                                                                                     |
+| File                                   | Contents                                                                                                                                                                                                            |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0001_foundation_extensions_enums`     | Extensions, all enums, domains, `set_updated_at()`                                                                                                                                                                  |
+| `0002_identity_security`               | `roles`, `profiles`, auth trigger, RLS helpers, `platform_settings`, `audit_logs` + `log_audit_event()`                                                                                                             |
+| `0003_vendors`                         | `vendors`, `vendor_users`, `vendor_applications`, `stores`, membership helpers, locked-column trigger                                                                                                               |
+| `0004_catalog_inventory`               | `categories`, `brands`, `products`, `product_variants`, `product_images`, `collections`, `collection_products`, `inventory`, `inventory_movements`, safe inventory functions                                        |
+| `0005_customer_data`                   | `addresses`, `carts`, `cart_items`, `wishlists`, `wishlist_items`                                                                                                                                                   |
+| `0006_orders_payments`                 | `orders`, `vendor_orders`, `order_items`, `payments`, `payment_transactions`, `returns`, `refunds`, order number generator                                                                                          |
+| `0007_reviews_promotions`              | `reviews`, `review_images`, `coupons`, `coupon_usages`, `flash_sales`, `flash_sale_items`                                                                                                                           |
+| `0008_finance_monetization`            | `commission_rules`, `commissions`, `payouts`, `payout_items`, `subscription_plans`, `vendor_subscriptions`, `featured_products`, `featured_brands`, `resolve_commission_rate_bps()`, `calculate_commission_minor()` |
+| `0009_engagement_content_analytics`    | `loyalty_accounts`, `loyalty_transactions`, `notifications`, `content_sections`, `banners`, `analytics_events`                                                                                                      |
+| `0010_storage`                         | Buckets and `storage.objects` policies                                                                                                                                                                              |
+| `0011_grants`                          | Explicit privileges for `anon`, `authenticated`, `service_role`                                                                                                                                                     |
+| `0012_phase2_vendor_catalog_workflows` | `products.search_vector`, vendor review and product moderation functions, `product_listings` and `product_variant_availability` views                                                                               |
 
 ## Entity relationships
 
@@ -138,6 +139,26 @@ Movements are immutable (`prevent_mutation` trigger).
 | `review-images`    | yes    | `<profile_id>/<review_id>/<file>` | owner, admins          |
 | `banners`          | yes    | `<file>`                          | admins                 |
 
+## Workflow functions (Phase 2)
+
+Multi-step administrative changes are `security definer` functions. They are atomic, re-check `is_admin()`
+themselves and write the audit log.
+
+| Function                                               | Effect                                                                                                                                                      |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `approve_vendor_application(id, slug, commission_bps)` | Creates the approved vendor, owner membership and draft store, sets the applicant role to `vendor`, marks the application approved. Audit `vendor.approved` |
+| `reject_vendor_application(id, reason)`                | Marks the application rejected with a reason. Audit `vendor.application_rejected`                                                                           |
+| `set_vendor_status(vendor_id, status, reason)`         | Suspend, reinstate or close. Audit `vendor.status_changed`                                                                                                  |
+| `moderate_product(product_id, approve, reason)`        | `pending_review` to `active` (requires an active variant) or `rejected`. Audit `product.approved` / `product.rejected`                                      |
+| `unpublish_product(product_id)`                        | Vendor member or admin moves `active` back to `draft`                                                                                                       |
+
+## Public catalog views
+
+`product_listings` and `product_variant_availability` are owner views that bypass RLS, so their definitions
+restrict rows to active products of approved vendors. `product_listings` adds the price range, primary image,
+store, brand and category names, an `in_stock` flag and the `search_vector` used for prefix full-text search.
+`product_variant_availability` exposes variants with `in_stock` and `is_low_stock` flags only, never quantities.
+
 ## Audit log
 
 `log_audit_event(action, entity_type, entity_id, metadata, ip, user_agent)` derives the actor from the
@@ -147,5 +168,6 @@ session and inserts into the append-only `audit_logs`. Action names are dotted l
 ## Testing the schema
 
 `npm run test:db` recreates `TEST_DATABASE_URL`, applies the Supabase shim and every migration, then runs
-58 assertions covering profile RLS, vendor lifecycle, catalog visibility, inventory safety, the multi-vendor
-order model and its invariants, commission resolution, and storage policies.
+assertions covering profile RLS, vendor lifecycle, catalog visibility, inventory safety, the multi-vendor
+order model and its invariants, commission resolution, storage policies, and the Phase 2 workflow functions
+and public catalog views.

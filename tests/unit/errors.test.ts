@@ -41,6 +41,16 @@ describe("fromPostgrestError", () => {
     expect(mapped.message).toBe("insufficient stock: have 3, requested change -4");
   });
 
+  it("maps transport failures to NETWORK", () => {
+    const mapped = fromPostgrestError({
+      code: "",
+      message: "TypeError: fetch failed",
+      details: "getaddrinfo ENOTFOUND x.supabase.co",
+    });
+    expect(mapped.code).toBe("NETWORK");
+    expect(mapped.message).not.toContain("ENOTFOUND");
+  });
+
   it("falls back to a generic DATABASE error", () => {
     expect(fromPostgrestError({ code: "XX000", message: "internal" }).code).toBe("DATABASE");
   });

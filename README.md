@@ -4,10 +4,11 @@ Luxora is a premium multi-vendor marketplace for fashion and lifestyle brands. A
 independent vendors in a single checkout; each vendor fulfils and is paid for its own part of the order; the
 platform earns commissions, subscriptions and paid placements.
 
-This repository is in **Phase 1 — Foundation**. The database architecture, security model, authentication,
-design system, route structure and testing strategy are in place. Commerce features (catalog management,
-cart, checkout, payouts, …) are delivered in later phases; routes for them exist and are protected, but
-deliberately render a "scheduled" notice instead of mock data.
+This repository has completed **Phase 1 — Foundation** and **Phase 2 — Vendor onboarding & catalog**.
+Vendors apply, administrators approve them, vendors build a storefront and catalog (products, variants,
+images, inventory), administrators moderate products, and customers browse the shop, search, categories,
+brands, stores and collections. Cart, checkout, orders, payouts and promotions arrive in later phases; their
+routes exist and are protected, but deliberately render a "scheduled" notice instead of mock data.
 
 ## Tech stack
 
@@ -76,22 +77,24 @@ The development seed (`supabase/seeds/dev/`) contains categories and subscriptio
 test accounts when running on a real Supabase stack. **Production works with an empty database**; nothing
 seeds orders, revenue or analytics.
 
-After schema changes, regenerate types with `npm run db:types` (requires the Supabase CLI). Until then
-`src/lib/supabase/database.types.ts` is maintained by hand in the generated format.
+After schema changes, regenerate types with `npm run db:types`. It runs the Supabase CLI (installed as a dev
+dependency) against `DATABASE_URL` (default: the local test database) and writes
+`src/lib/supabase/database.generated.ts`. `database.types.ts` holds the application aliases on top of it.
 
 ## Development commands
 
-| Command             | What it does                                      |
-| ------------------- | ------------------------------------------------- |
-| `npm run dev`       | Start the dev server                              |
-| `npm run build`     | Production build                                  |
-| `npm run typecheck` | Generate route types and run `tsc --noEmit`       |
-| `npm run lint`      | ESLint                                            |
-| `npm run format`    | Prettier (write) / `format:check` in CI           |
-| `npm run test`      | Unit tests (no database needed)                   |
-| `npm run test:db`   | Migration + RLS tests against `TEST_DATABASE_URL` |
-| `npm run test:all`  | Both suites                                       |
-| `npm run check`     | typecheck + lint + all tests                      |
+| Command             | What it does                                                |
+| ------------------- | ----------------------------------------------------------- |
+| `npm run dev`       | Start the dev server                                        |
+| `npm run build`     | Production build                                            |
+| `npm run typecheck` | Generate route types and run `tsc --noEmit`                 |
+| `npm run lint`      | ESLint                                                      |
+| `npm run format`    | Prettier (write) / `format:check` in CI                     |
+| `npm run test`      | Unit tests (no database needed)                             |
+| `npm run test:db`   | Migration + RLS tests against `TEST_DATABASE_URL`           |
+| `npm run db:types`  | Regenerate `database.generated.ts` from a migrated database |
+| `npm run test:all`  | Both suites                                                 |
+| `npm run check`     | typecheck + lint + all tests                                |
 
 ## Architecture overview
 
@@ -122,7 +125,7 @@ src/
   components/layout/    header, footer, portal shell, navigation
   components/shared/    page header, empty state, phase placeholder
   config/routes.ts      route constants, protected-path rules
-  features/<domain>/    server actions + feature components (auth, vendors, account)
+  features/<domain>/    actions, queries and components (auth, vendors, account, catalog, inventory, admin)
   lib/supabase/         server / browser / admin clients, proxy session refresh, DB types
   lib/auth/dal.ts       getCurrentUser / requireUser / requireRole / requireVendorContext
   lib/errors/           AppError, Supabase error mapping, ActionResult
@@ -165,15 +168,30 @@ and the database (RLS policies + triggers). Only the database layer is authorita
 
 ## Implementation phases
 
-| Phase | Scope                                                                                                                |
-| ----- | -------------------------------------------------------------------------------------------------------------------- |
-| 1 ✅  | Foundation: schema, RLS, auth, roles, design system, routes, tests, docs                                             |
-| 2     | Vendor onboarding review, store setup, product/variant/image management, inventory UI, catalog browsing & search     |
-| 3     | Cart, checkout orchestration (multi-vendor order split, reservations), payments provider, orders, addresses, reviews |
-| 4     | Commissions ledger, payouts, refunds & returns workflows, coupons, flash sales, subscriptions                        |
-| 5     | Analytics, content management, loyalty, notifications, featured placements                                           |
+| Phase | Scope                                                                                                                                                                                             |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 ✅  | Foundation: schema, RLS, auth, roles, design system, routes, tests, docs                                                                                                                          |
+| 2 ✅  | Vendor application review and approval, store setup with logo/cover uploads, product/variant/image management, inventory UI on the safe stock functions, product moderation, public catalog pages |
+| 3     | Cart, checkout orchestration (multi-vendor order split, reservations), payments provider, orders, addresses, reviews                                                                              |
+| 4     | Commissions ledger, payouts, refunds & returns workflows, coupons, flash sales, subscriptions                                                                                                     |
+| 5     | Analytics, content management, loyalty, notifications, featured placements                                                                                                                        |
 
 ## Status
 
-Phase 1 is complete and verified (`npm run check`). The application is **not production-ready** yet: it has
-no catalog, cart or payment flows. See the phase table for what comes next.
+Phases 1 and 2 are complete and verified (`npm run check`). The application is **not production-ready** yet:
+customers can browse but not buy. Cart, checkout and payments are Phase 3.
+
+### Phase 2 workflows
+
+- **Vendor approval.** `/admin/vendors` lists open applications. Approving calls `approve_vendor_application()`,
+  which atomically creates the vendor, the owner membership and a draft store, upgrades the applicant's role
+  and writes an audit entry. Rejection stores a reason the applicant sees at `/vendor/onboarding`.
+- **Storefront.** `/vendor/storefront` edits store details, uploads logo and cover straight to Supabase Storage
+  and publishes or unpublishes the store. Uploaded paths are re-validated server-side against the vendor folder.
+- **Catalog.** `/vendor/products` creates products, then variants (SKU, price, options), images and inventory,
+  then submits for review. `/admin/products` approves or rejects through `moderate_product()`.
+- **Inventory.** `/vendor/inventory` changes stock only through `adjust_inventory()` and shows the immutable
+  movement history.
+- **Public catalog.** `/shop`, `/search`, `/category/[slug]`, `/brand/[slug]`, `/store/[slug]`,
+  `/collection/[slug]` and `/product/[slug]` read the `product_listings` and `product_variant_availability`
+  views. They only expose active products of approved vendors and never expose stock quantities.

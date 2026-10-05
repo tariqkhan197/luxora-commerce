@@ -21,6 +21,13 @@ export interface AuthLikeError {
  * messages are never forwarded to the user.
  */
 export function fromPostgrestError(error: PostgrestLikeError): AppError {
+  // supabase-js surfaces transport failures as a PostgREST-shaped error with an empty code.
+  if (
+    !error.code &&
+    /fetch failed|network|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(`${error.message} ${error.details ?? ""}`)
+  ) {
+    return new AppError("NETWORK", { cause: error });
+  }
   switch (error.code) {
     case "PGRST116": // no rows returned for .single()
       return new AppError("NOT_FOUND", { cause: error });

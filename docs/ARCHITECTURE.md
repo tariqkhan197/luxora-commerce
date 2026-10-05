@@ -110,6 +110,22 @@ The DB suite applies `tests/db/supabase-shim.sql` (roles, `auth.uid()`, `storage
 migrations, and impersonates API requests exactly like PostgREST: `SET LOCAL ROLE authenticated` +
 `request.jwt.claims`. CI runs it on a `postgres:16` service container.
 
+## Phase 2 flows
+
+```
+Customer  apply ──────────────► vendor_applications
+Admin     approve_vendor_application ─► vendors + vendor_users (owner) + stores (draft)
+Vendor    store settings, logo/cover upload (browser → Storage, RLS by folder) ─► stores
+Vendor    product (draft) ─► variants (+ inventory row) ─► images ─► submit (pending_review)
+Admin     moderate_product ─► active | rejected
+Vendor    adjust_inventory ─► inventory + inventory_movements (append-only)
+Public    product_listings / product_variant_availability views ─► /shop /search /category /brand /store /collection /product
+```
+
+Browser uploads go straight to Supabase Storage. The storage policies decide whether the user may write to
+`<vendor_id>/…`, then the Server Action validates the returned path against the same owner folder before
+persisting it. Public reads never touch `inventory` directly; the views expose boolean stock flags only.
+
 ## Conventions
 
 - Routes come from `src/config/routes.ts`; never hard-code paths.

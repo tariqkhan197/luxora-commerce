@@ -62,17 +62,13 @@ describe("products", () => {
       `insert into public.products (vendor_id, slug, name, status) values ($1, 'hidden-draft', 'Hidden', 'draft')`,
       [vendorId],
     );
-    const anonRows = await asAnon(pool, (s) =>
-      s.rows<{ slug: string }>("select slug from public.products order by slug"),
-    );
+    // Scoped to this test's fixtures: other suites share the database.
+    const scoped = "select slug from public.products where slug in ('silk-scarf', 'hidden-draft') order by slug";
+    const anonRows = await asAnon(pool, (s) => s.rows<{ slug: string }>(scoped));
     expect(anonRows.map((r) => r.slug)).toEqual(["silk-scarf"]);
-    const ownerRows = await asUser(pool, owner, (s) =>
-      s.rows<{ slug: string }>("select slug from public.products order by slug"),
-    );
+    const ownerRows = await asUser(pool, owner, (s) => s.rows<{ slug: string }>(scoped));
     expect(ownerRows.map((r) => r.slug)).toEqual(["hidden-draft", "silk-scarf"]);
-    const otherRows = await asUser(pool, otherOwner, (s) =>
-      s.rows<{ slug: string }>("select slug from public.products order by slug"),
-    );
+    const otherRows = await asUser(pool, otherOwner, (s) => s.rows<{ slug: string }>(scoped));
     expect(otherRows.map((r) => r.slug)).toEqual(["silk-scarf"]);
   });
 

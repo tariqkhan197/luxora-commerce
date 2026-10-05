@@ -19,7 +19,7 @@
     "check": "npm run typecheck && npm run lint && npm run test:all",
     "db:reset:local": "node scripts/db/apply-migrations.mjs --recreate --shim --url ${DATABASE_URL:-postgres://postgres:postgres@localhost:5432/luxora_dev}",
     "db:seed:dev": "node scripts/db/apply-migrations.mjs --recreate --shim --seed-dev --url ${DATABASE_URL:-postgres://postgres:postgres@localhost:5432/luxora_dev}",
-    "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts"
+    "db:types": "supabase gen types typescript --db-url ${DATABASE_URL:-postgres://postgres:postgres@localhost:5432/luxora_test} --schema public > src/lib/supabase/database.generated.ts && prettier --write src/lib/supabase/database.generated.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -56,6 +56,7 @@
     "pg": "^8.23.1",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "supabase": "^2.119.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",

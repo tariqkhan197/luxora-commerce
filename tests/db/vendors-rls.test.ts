@@ -58,7 +58,9 @@ describe("vendor applications", () => {
     );
     const strangerRows = await asUser(pool, stranger, (s) => s.rows("select id from public.vendor_applications"));
     expect(strangerRows).toEqual([]);
-    const adminRows = await asUser(pool, admin, (s) => s.rows("select business_name from public.vendor_applications"));
+    const adminRows = await asUser(pool, admin, (s) =>
+      s.rows("select business_name from public.vendor_applications where profile_id = $1", [applicant.profileId]),
+    );
     expect(adminRows).toEqual([{ business_name: "Atelier Nord" }]);
   });
 
@@ -66,7 +68,9 @@ describe("vendor applications", () => {
     await asUser(pool, admin, async (s) => {
       const result = await s.query(
         `update public.vendor_applications
-            set status = 'under_review', reviewed_by = public.current_profile_id(), reviewed_at = now()`,
+            set status = 'under_review', reviewed_by = public.current_profile_id(), reviewed_at = now()
+          where profile_id = $1`,
+        [applicant.profileId],
       );
       expect(result.rowCount).toBe(1);
     });

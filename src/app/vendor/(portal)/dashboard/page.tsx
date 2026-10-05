@@ -18,12 +18,24 @@ export default async function VendorDashboardPage() {
   const supabase = await createClient();
 
   // Real, RLS-scoped counts. With an empty catalog these are simply zero.
-  const [{ data: products, error: productsError }, { data: store, error: storeError }] = await Promise.all([
+  const [
+    { data: products, error: productsError },
+    { data: store, error: storeError },
+    { data: inventory, error: inventoryError },
+  ] = await Promise.all([
     supabase.from("products").select("status").eq("vendor_id", vendor.id),
     supabase.from("stores").select("slug, name, status").eq("vendor_id", vendor.id).maybeSingle(),
+    supabase
+      .from("inventory")
+      .select("available_quantity, low_stock_threshold, track_inventory")
+      .eq("vendor_id", vendor.id),
   ]);
   if (productsError) throw fromPostgrestError(productsError);
   if (storeError) throw fromPostgrestError(storeError);
+  if (inventoryError) throw fromPostgrestError(inventoryError);
+  const lowStock = (inventory ?? []).filter(
+    (row) => row.track_inventory && (row.available_quantity ?? 0) <= row.low_stock_threshold,
+  ).length;
 
   const counts = Object.fromEntries(PRODUCT_STATUSES.map((status) => [status, 0])) as Record<
     (typeof PRODUCT_STATUSES)[number],
@@ -70,7 +82,11 @@ export default async function VendorDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Catalog</CardTitle>
-            <CardDescription>Products by status</CardDescription>
+            <CardDescription>
+              <Link href={ROUTES.vendor.products} className="underline-offset-4 hover:underline">
+                Products by status
+              </Link>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -81,6 +97,24 @@ export default async function VendorDashboardPage() {
                 </div>
               ))}
             </dl>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Inventory</CardTitle>
+            <CardDescription>
+              {inventory?.length
+                ? `${inventory.length} variant${inventory.length === 1 ? "" : "s"} tracked · ${lowStock} low on stock`
+                : "No inventory records yet."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" size="sm">
+              <Link href={lowStock ? `${ROUTES.vendor.inventory}?filter=low` : ROUTES.vendor.inventory}>
+                Manage inventory
+              </Link>
+            </Button>
           </CardContent>
         </Card>
 

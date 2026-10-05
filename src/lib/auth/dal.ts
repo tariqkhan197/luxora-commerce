@@ -127,6 +127,31 @@ export async function assertRole(allowed: readonly UserRole[]): Promise<CurrentU
   return current;
 }
 
+/** Vendor context for Server Actions: throws instead of redirecting. */
+export async function assertVendorContext(allowedRoles?: readonly VendorMemberRole[]): Promise<VendorContext> {
+  const current = await assertUser();
+  const supabase = await createClient();
+  const { data: membership, error } = await supabase
+    .from("vendor_users")
+    .select("vendor_id, role")
+    .eq("profile_id", current.profile.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw fromPostgrestError(error);
+  if (!membership) throw AppError.forbidden("You are not a member of a vendor.");
+  if (allowedRoles && !allowedRoles.includes(membership.role)) {
+    throw AppError.forbidden("Your vendor role does not allow this action.");
+  }
+  const { data: vendor, error: vendorError } = await supabase
+    .from("vendors")
+    .select("*")
+    .eq("id", membership.vendor_id)
+    .single();
+  if (vendorError) throw fromPostgrestError(vendorError);
+  return { ...current, vendor, memberRole: membership.role };
+}
+
 export function defaultDestination(profile: Pick<Profile, "role">): string {
   return homeForRole(profile.role);
 }
