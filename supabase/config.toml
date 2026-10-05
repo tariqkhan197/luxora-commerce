@@ -1,0 +1,47 @@
+# Supabase CLI configuration for local development.
+# Docs: https://supabase.com/docs/guides/local-development/cli/config
+project_id = "luxora-commerce"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+# Development-only seed data. Never applied by `supabase db push`.
+enabled = true
+sql_paths = ["./seeds/dev/*.sql"]
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "env(NEXT_PUBLIC_SITE_URL)"
+additional_redirect_urls = ["http://localhost:3000/**"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+minimum_password_length = 10
+password_requirements = "lower_upper_letters_digits"
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = true
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
