@@ -99,7 +99,7 @@ create trigger reviews_protect_locked_columns
 --   free_shipping→ ignored (0)
 -- -----------------------------------------------------------------------------
 create table public.coupons (
-  code                      citext not null unique check (code ~* '^[A-Z0-9][A-Z0-9_-]{2,31}$'),
+  code                      extensions.citext not null unique check (code ~* '^[A-Z0-9][A-Z0-9_-]{2,31}$'),
   id                        uuid primary key default gen_random_uuid(),
   scope                     public.coupon_scope not null,
   vendor_id                 uuid references public.vendors (id) on delete cascade,

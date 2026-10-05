@@ -5,16 +5,16 @@ PostgreSQL (Supabase). Migrations in `supabase/migrations/`, applied in filename
 
 ## Conventions
 
-| Concern      | Convention                                                                          |
-| ------------ | ----------------------------------------------------------------------------------- |
-| Primary keys | `uuid` (`gen_random_uuid()`); append-only logs use `bigint identity`                |
-| Money        | `bigint` **minor units** (`*_minor`) + `currency char(3)`; domain `money_minor` ≥ 0 |
-| Rates        | `integer` **basis points** (`*_bps`, 10000 = 100 %); domain `basis_points`          |
-| Slugs        | domain `slug_text`: `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 2–120 chars                       |
-| Timestamps   | `timestamptz`; `updated_at` maintained by `set_updated_at()` trigger                |
-| Statuses     | PostgreSQL enums (extend with `alter type … add value` in a migration)              |
-| Snapshots    | Orders copy product names, SKUs, prices and addresses at purchase time              |
-| Extensions   | `pgcrypto`, `citext`, `pg_trgm` in schema `extensions`                              |
+| Concern      | Convention                                                                                                                                                                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Primary keys | `uuid` (`gen_random_uuid()`); append-only logs use `bigint identity`                                                                                                                                                                            |
+| Money        | `bigint` **minor units** (`*_minor`) + `currency char(3)`; domain `money_minor` ≥ 0                                                                                                                                                             |
+| Rates        | `integer` **basis points** (`*_bps`, 10000 = 100 %); domain `basis_points`                                                                                                                                                                      |
+| Slugs        | domain `slug_text`: `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 2–120 chars                                                                                                                                                                                   |
+| Timestamps   | `timestamptz`; `updated_at` maintained by `set_updated_at()` trigger                                                                                                                                                                            |
+| Statuses     | PostgreSQL enums (extend with `alter type … add value` in a migration)                                                                                                                                                                          |
+| Snapshots    | Orders copy product names, SKUs, prices and addresses at purchase time                                                                                                                                                                          |
+| Extensions   | `pgcrypto`, `citext`, `pg_trgm` in schema `extensions`. Always schema-qualify their objects in migrations (`extensions.citext`, `extensions.gin_trgm_ops`, `extensions.crypt`): `supabase db push` does not put `extensions` on the search path |
 
 ## Migrations
 

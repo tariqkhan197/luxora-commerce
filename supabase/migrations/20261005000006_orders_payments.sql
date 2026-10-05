@@ -42,7 +42,7 @@ create table public.orders (
   tax_minor          public.money_minor not null default 0,
   total_minor        public.money_minor not null default 0,
   coupon_code        text,
-  customer_email     citext not null,
+  customer_email     extensions.citext not null,
   customer_note      text check (customer_note is null or char_length(customer_note) <= 1000),
   shipping_address   jsonb not null,   -- immutable snapshot of the address at purchase time
   billing_address    jsonb not null,

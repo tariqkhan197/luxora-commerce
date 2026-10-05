@@ -54,6 +54,9 @@ async function recreateDatabase(targetUrl) {
   }
 }
 
+/** Search path used while applying migrations: deliberately excludes `extensions`. */
+export const MIGRATION_SEARCH_PATH = "public";
+
 export async function applyMigrations({ url: connectionString, shim = false, seedDev = false, quiet = false }) {
   const client = new pg.Client({ connectionString });
   await client.connect();
@@ -65,6 +68,10 @@ export async function applyMigrations({ url: connectionString, shim = false, see
     }
     for (const { file, sql } of await readSqlFiles(path.join(root, "supabase/migrations"))) {
       log(`→ ${file}`);
+      // `supabase db push` does not put the `extensions` schema on the search path, so
+      // migrations must schema-qualify extension objects (extensions.citext, …).
+      // Apply each file the same way so an unqualified reference fails here first.
+      await client.query(`set search_path to ${MIGRATION_SEARCH_PATH}`);
       await client.query(sql);
     }
     if (seedDev) {

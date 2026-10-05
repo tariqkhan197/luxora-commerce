@@ -76,7 +76,7 @@ create table public.products (
 create index products_vendor_idx on public.products (vendor_id, status);
 create index products_category_idx on public.products (category_id) where status = 'active';
 create index products_brand_idx on public.products (brand_id) where status = 'active';
-create index products_name_trgm_idx on public.products using gin (name gin_trgm_ops);
+create index products_name_trgm_idx on public.products using gin (name extensions.gin_trgm_ops);
 create index products_tags_idx on public.products using gin (tags);
 
 create trigger products_set_updated_at

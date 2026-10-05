@@ -13,7 +13,7 @@ create table public.vendors (
   slug                 public.slug_text not null unique,
   legal_name           text not null check (char_length(legal_name) between 2 and 160),
   display_name         text not null check (char_length(display_name) between 2 and 120),
-  contact_email        citext not null check (contact_email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  contact_email        extensions.citext not null check (contact_email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
   contact_phone        text check (contact_phone is null or contact_phone ~ '^\+?[0-9(][0-9 ()-]{6,19}$'),
   status               public.vendor_status not null default 'pending',
   commission_rate_bps  public.basis_points,            -- null = inherit category/global rule
@@ -57,7 +57,7 @@ create table public.vendor_applications (
   id                uuid primary key default gen_random_uuid(),
   profile_id        uuid not null references public.profiles (id) on delete cascade,
   business_name     text not null check (char_length(business_name) between 2 and 160),
-  business_email    citext not null check (business_email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  business_email    extensions.citext not null check (business_email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
   business_phone    text check (business_phone is null or business_phone ~ '^\+?[0-9(][0-9 ()-]{6,19}$'),
   website_url       text check (website_url is null or website_url ~* '^https?://'),
   description       text not null check (char_length(description) between 20 and 4000),
