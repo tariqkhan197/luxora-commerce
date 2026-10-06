@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { AddToBagButton } from "@/features/cart/components/add-to-bag-button";
 import { formatMoney } from "@/lib/money";
 import { asOptionRecord, type ProductVariantAvailability } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
@@ -10,13 +10,16 @@ import { cn } from "@/lib/utils";
 interface VariantSelectorProps {
   variants: ProductVariantAvailability[];
   currency: string;
+  /** Product page path, used to return after signing in. */
+  returnPath: string;
 }
 
 /**
- * Lets the customer pick a variant by its options. Purchasing arrives with the
- * cart in Phase 3; until then the selection drives price and availability only.
+ * Lets the customer pick a variant by its options and add it to their bag.
+ * Price and availability shown here are display-only; the cart functions
+ * re-read both from the database.
  */
-export function VariantSelector({ variants, currency }: VariantSelectorProps) {
+export function VariantSelector({ variants, currency, returnPath }: VariantSelectorProps) {
   const defaultVariant = variants.find((v) => v.is_default) ?? variants[0];
   const [selectedId, setSelectedId] = useState<string | null>(defaultVariant?.variant_id ?? null);
   const selected = variants.find((v) => v.variant_id === selectedId) ?? defaultVariant;
@@ -111,10 +114,14 @@ export function VariantSelector({ variants, currency }: VariantSelectorProps) {
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <Button size="lg" disabled title="Checkout arrives in Phase 3">
-          {selected.in_stock ? "Add to bag" : "Sold out"}
-        </Button>
-        <p className="text-xs text-ink-faint">Purchasing opens with checkout in the next release. SKU {selected.sku}</p>
+        {selected.variant_id ? (
+          <AddToBagButton
+            variantId={selected.variant_id}
+            inStock={Boolean(selected.in_stock)}
+            returnPath={returnPath}
+          />
+        ) : null}
+        <p className="text-xs text-ink-faint">SKU {selected.sku}</p>
       </div>
     </div>
   );

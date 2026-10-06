@@ -126,6 +126,24 @@ Browser uploads go straight to Supabase Storage. The storage policies decide whe
 `<vendor_id>/…`, then the Server Action validates the returned path against the same owner folder before
 persisting it. Public reads never touch `inventory` directly; the views expose boolean stock flags only.
 
+## Phase 3: checkout and the payment boundary
+
+```
+Browser ── ids + quantities ──► cart functions ──► carts / cart_items (price snapshot from catalog)
+Browser ── address ids, token, displayed total ──► place_order()
+             ├─ re-price from catalog, reject if total drifted
+             ├─ lock inventory rows (variant order) → reserve stock
+             ├─ orders (pending, reservation_expires_at) → vendor_orders (one per vendor) → order_items (snapshots)
+             └─ cart converted
+Unpaid ──► expire_stale_checkouts() / cancel_pending_order() ──► release stock, cancel
+Paid   ──► provider webhook (server, service role) ──► confirm_order_payment() ──► commit stock, record payment
+```
+
+The TypeScript quote (`src/features/checkout/quote.ts`) uses the integer money utilities to display the same
+totals the database will compute from the same catalog rows. It is never trusted: its total is sent as
+`expectedTotalMinor` and the database rejects a mismatch. Payment collection is behind the adapter interface in
+`src/lib/payments/provider.ts`; no adapter ships yet, so orders remain unpaid and expire.
+
 ## Conventions
 
 - Routes come from `src/config/routes.ts`; never hard-code paths.

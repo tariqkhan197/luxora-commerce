@@ -100,7 +100,7 @@ export default async function VendorStorefrontPage() {
                     variant="outline"
                     size="sm"
                     confirmMessage="Unpublish your store? Customers will no longer see it."
-                    action={() => setStorePublished({ publish: false })}
+                    action={setStorePublished.bind(null, { publish: false })}
                   >
                     Unpublish store
                   </ActionButton>
@@ -108,7 +108,7 @@ export default async function VendorStorefrontPage() {
                   <ActionButton
                     size="sm"
                     disabled={vendor.status !== "approved"}
-                    action={() => setStorePublished({ publish: true })}
+                    action={setStorePublished.bind(null, { publish: true })}
                   >
                     Publish store
                   </ActionButton>

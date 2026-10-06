@@ -136,6 +136,8 @@ export const SQLSTATE = {
   uniqueViolation: "23505",
   restrictViolation: "23001",
   noDataFound: "P0002",
+  /** Business-rule error raised by our functions with a user-safe message. */
+  raiseException: "P0001",
 } as const;
 
 export function isPgError(error: unknown): error is pg.DatabaseError {

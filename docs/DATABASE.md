@@ -18,20 +18,21 @@ PostgreSQL (Supabase). Migrations in `supabase/migrations/`, applied in filename
 
 ## Migrations
 
-| File                                   | Contents                                                                                                                                                                                                            |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0001_foundation_extensions_enums`     | Extensions, all enums, domains, `set_updated_at()`                                                                                                                                                                  |
-| `0002_identity_security`               | `roles`, `profiles`, auth trigger, RLS helpers, `platform_settings`, `audit_logs` + `log_audit_event()`                                                                                                             |
-| `0003_vendors`                         | `vendors`, `vendor_users`, `vendor_applications`, `stores`, membership helpers, locked-column trigger                                                                                                               |
-| `0004_catalog_inventory`               | `categories`, `brands`, `products`, `product_variants`, `product_images`, `collections`, `collection_products`, `inventory`, `inventory_movements`, safe inventory functions                                        |
-| `0005_customer_data`                   | `addresses`, `carts`, `cart_items`, `wishlists`, `wishlist_items`                                                                                                                                                   |
-| `0006_orders_payments`                 | `orders`, `vendor_orders`, `order_items`, `payments`, `payment_transactions`, `returns`, `refunds`, order number generator                                                                                          |
-| `0007_reviews_promotions`              | `reviews`, `review_images`, `coupons`, `coupon_usages`, `flash_sales`, `flash_sale_items`                                                                                                                           |
-| `0008_finance_monetization`            | `commission_rules`, `commissions`, `payouts`, `payout_items`, `subscription_plans`, `vendor_subscriptions`, `featured_products`, `featured_brands`, `resolve_commission_rate_bps()`, `calculate_commission_minor()` |
-| `0009_engagement_content_analytics`    | `loyalty_accounts`, `loyalty_transactions`, `notifications`, `content_sections`, `banners`, `analytics_events`                                                                                                      |
-| `0010_storage`                         | Buckets and `storage.objects` policies                                                                                                                                                                              |
-| `0011_grants`                          | Explicit privileges for `anon`, `authenticated`, `service_role`                                                                                                                                                     |
-| `0012_phase2_vendor_catalog_workflows` | `products.search_vector`, vendor review and product moderation functions, `product_listings` and `product_variant_availability` views                                                                               |
+| File                                         | Contents                                                                                                                                                                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0001_foundation_extensions_enums`           | Extensions, all enums, domains, `set_updated_at()`                                                                                                                                                                  |
+| `0002_identity_security`                     | `roles`, `profiles`, auth trigger, RLS helpers, `platform_settings`, `audit_logs` + `log_audit_event()`                                                                                                             |
+| `0003_vendors`                               | `vendors`, `vendor_users`, `vendor_applications`, `stores`, membership helpers, locked-column trigger                                                                                                               |
+| `0004_catalog_inventory`                     | `categories`, `brands`, `products`, `product_variants`, `product_images`, `collections`, `collection_products`, `inventory`, `inventory_movements`, safe inventory functions                                        |
+| `0005_customer_data`                         | `addresses`, `carts`, `cart_items`, `wishlists`, `wishlist_items`                                                                                                                                                   |
+| `0006_orders_payments`                       | `orders`, `vendor_orders`, `order_items`, `payments`, `payment_transactions`, `returns`, `refunds`, order number generator                                                                                          |
+| `0007_reviews_promotions`                    | `reviews`, `review_images`, `coupons`, `coupon_usages`, `flash_sales`, `flash_sale_items`                                                                                                                           |
+| `0008_finance_monetization`                  | `commission_rules`, `commissions`, `payouts`, `payout_items`, `subscription_plans`, `vendor_subscriptions`, `featured_products`, `featured_brands`, `resolve_commission_rate_bps()`, `calculate_commission_minor()` |
+| `0009_engagement_content_analytics`          | `loyalty_accounts`, `loyalty_transactions`, `notifications`, `content_sections`, `banners`, `analytics_events`                                                                                                      |
+| `0010_storage`                               | Buckets and `storage.objects` policies                                                                                                                                                                              |
+| `0011_grants`                                | Explicit privileges for `anon`, `authenticated`, `service_role`                                                                                                                                                     |
+| `0012_phase2_vendor_catalog_workflows`       | `products.search_vector`, vendor review and product moderation functions, `product_listings` and `product_variant_availability` views                                                                               |
+| `20261006000013_phase3_cart_checkout_orders` | Cart functions, shared stock helpers, `place_order()`, expiry and cancellation, `confirm_order_payment()`, immutable order financials, vendor fulfilment rules, tightened grants                                    |
 
 ## Entity relationships
 
@@ -158,6 +159,33 @@ themselves and write the audit log.
 restrict rows to active products of approved vendors. `product_listings` adds the price range, primary image,
 store, brand and category names, an `in_stock` flag and the `search_vector` used for prefix full-text search.
 `product_variant_availability` exposes variants with `in_stock` and `is_low_stock` flags only, never quantities.
+
+## Cart, checkout and payment functions (Phase 3)
+
+| Function                                                                                                   | Caller                              | Effect                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cart_lines()`                                                                                             | customer                            | The caller's active cart, priced from the catalog, with availability and a reason when a line cannot be bought                                                                |
+| `add_to_cart(variant, qty)`, `set_cart_item_quantity(item, qty)`, `remove_cart_item(item)`, `clear_cart()` | customer                            | Only way to write cart rows. Validate product, vendor, variant, stock and single-currency bags; snapshot the current price                                                    |
+| `place_order(shipping_id, billing_id, token, expected_total, note)`                                        | customer                            | Atomic checkout: re-price, lock inventory in variant order, reserve, create order + vendor orders + items with commission snapshots, convert cart. Idempotent per token       |
+| `cancel_pending_order(order)`                                                                              | owner or admin                      | Releases reservations of an unpaid order and cancels it (admin cancellations audited)                                                                                         |
+| `expire_stale_checkouts(variant_ids?)`                                                                     | service role, cron, `place_order()` | Cancels unpaid orders past `reservation_expires_at` and releases their stock exactly once (`for update skip locked`)                                                          |
+| `confirm_order_payment(order, provider, ref, amount, currency, fee, payload)`                              | service role only                   | Verifies the amount, records the payment and transactions, commits reserved stock, allocates the provider fee across vendor orders (largest remainder) and confirms the order |
+
+`reserve_inventory`, `release_inventory` and `commit_reserved_inventory` keep their Phase 1 privilege checks and now
+delegate to internal helpers that checkout shares, so there is one implementation of each stock change.
+
+### Phase 3 security changes
+
+- `cart_items` and `carts` lost INSERT and UPDATE grants for `authenticated`; only the cart functions write them.
+- `orders` lost UPDATE for `authenticated`. `vendor_orders` and `order_items` keep UPDATE only on fulfilment
+  columns (status, carrier, tracking, timestamps, note; `fulfilled_quantity`).
+- Triggers `*_lock_financials` make order prices, totals, commissions, fees and address snapshots immutable for
+  `anon`, `authenticated` (admins included) and `service_role`. Only trusted functions running as their owner can
+  change them (`in_trusted_context()`).
+- The Phase 1 policy `orders_select_vendor` was dropped: a parent order holds other vendors' totals. Vendors read
+  their `vendor_orders` row, which now carries a `shipping_address` snapshot for fulfilment.
+- Vendor status changes must move forward from a paid order: `confirmed → processing → shipped → delivered`.
+  Pending (unpaid) orders cannot be fulfilled.
 
 ## Audit log
 

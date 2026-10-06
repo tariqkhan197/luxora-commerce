@@ -4,11 +4,12 @@ Luxora is a premium multi-vendor marketplace for fashion and lifestyle brands. A
 independent vendors in a single checkout; each vendor fulfils and is paid for its own part of the order; the
 platform earns commissions, subscriptions and paid placements.
 
-This repository has completed **Phase 1 — Foundation** and **Phase 2 — Vendor onboarding & catalog**.
-Vendors apply, administrators approve them, vendors build a storefront and catalog (products, variants,
-images, inventory), administrators moderate products, and customers browse the shop, search, categories,
-brands, stores and collections. Cart, checkout, orders, payouts and promotions arrive in later phases; their
-routes exist and are protected, but deliberately render a "scheduled" notice instead of mock data.
+This repository has completed **Phase 1 — Foundation**, **Phase 2 — Vendor onboarding & catalog** and
+**Phase 3 — Cart, checkout & orders**. Customers can build a multi-vendor bag, manage addresses and place an
+order that is split into one vendor order per brand with stock reserved. **Online payment is not enabled yet:**
+orders are created as _awaiting payment_, nothing is charged, and unpaid reservations expire automatically.
+Payouts, refunds and promotions arrive in later phases; their routes exist and are protected, but deliberately
+render a "scheduled" notice instead of mock data.
 
 ## Tech stack
 
@@ -172,14 +173,14 @@ and the database (RLS policies + triggers). Only the database layer is authorita
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1 ✅  | Foundation: schema, RLS, auth, roles, design system, routes, tests, docs                                                                                                                          |
 | 2 ✅  | Vendor application review and approval, store setup with logo/cover uploads, product/variant/image management, inventory UI on the safe stock functions, product moderation, public catalog pages |
-| 3     | Cart, checkout orchestration (multi-vendor order split, reservations), payments provider, orders, addresses, reviews                                                                              |
+| 3 ✅  | Cart (database-priced), addresses, multi-vendor checkout with stock reservation and expiry, customer/vendor/admin order views, payment-provider boundary (no provider enabled yet)                |
 | 4     | Commissions ledger, payouts, refunds & returns workflows, coupons, flash sales, subscriptions                                                                                                     |
 | 5     | Analytics, content management, loyalty, notifications, featured placements                                                                                                                        |
 
 ## Status
 
-Phases 1 and 2 are complete and verified (`npm run check`). The application is **not production-ready** yet:
-customers can browse but not buy. Cart, checkout and payments are Phase 3.
+Phases 1–3 are complete and verified (`npm run check`). The application is **not production-ready** yet: no
+payment provider is integrated, so orders cannot be paid, and shipping and tax are not calculated.
 
 ### Phase 2 workflows
 
@@ -195,3 +196,24 @@ customers can browse but not buy. Cart, checkout and payments are Phase 3.
 - **Public catalog.** `/shop`, `/search`, `/category/[slug]`, `/brand/[slug]`, `/store/[slug]`,
   `/collection/[slug]` and `/product/[slug]` read the `product_listings` and `product_variant_availability`
   views. They only expose active products of approved vendors and never expose stock quantities.
+
+### Phase 3 workflows
+
+- **Cart.** `/cart` groups the bag by brand. Every write goes through `add_to_cart()`, `set_cart_item_quantity()`,
+  `remove_cart_item()` and `clear_cart()`, which read prices and availability from the catalog. Customers cannot
+  write cart rows directly, so a price can never come from the browser.
+- **Addresses.** `/account/addresses` manages shipping and billing addresses (owner-only by RLS). Orders store a
+  copy of the address, so editing or deleting one never changes a past order.
+- **Checkout.** `/checkout` calls `place_order()`, which in one transaction re-prices the bag, locks inventory rows
+  in a fixed order, reserves stock, creates the parent order plus one vendor order per brand with per-line
+  commission snapshots, and converts the cart. The checkout token makes double submits idempotent, and the total
+  the customer saw is re-checked so a price change cannot be charged silently.
+- **Reservations.** Unpaid checkouts hold stock for `checkout.reservation_minutes` (30). `expire_stale_checkouts()`
+  releases them; it runs every five minutes when `pg_cron` is enabled, and `place_order()` also expires stale
+  reservations for the items it touches. Customers can cancel an unpaid order themselves.
+- **Payment boundary.** `confirm_order_payment()` is the only path that records a payment and turns reserved stock
+  into sold stock. It is callable only with the service role, from a provider webhook that does not exist yet.
+  `src/lib/payments/provider.ts` defines the adapter interface; with `PAYMENT_PROVIDER` unset, payments are off.
+- **Orders.** Customers see `/account/orders`; vendors see only their own vendor orders at `/vendor/orders` and can
+  fulfil them only after payment; admins see everything at `/admin/orders`. Order prices, totals and commissions
+  are immutable for every API role, admins and the service role included.

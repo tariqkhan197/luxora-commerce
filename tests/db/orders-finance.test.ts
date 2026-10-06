@@ -52,9 +52,10 @@ async function createMultiVendorOrder(s: Session) {
     [customer.profileId, subtotalA + subtotalB, subtotalA + subtotalB + 1000, customer.email, JSON.stringify(address)],
   );
   const voA = await s.one<{ id: string }>(
-    `insert into public.vendor_orders (order_id, vendor_id, vendor_order_number, currency, subtotal_minor, shipping_minor, total_minor,
+    // Vendor order A is paid ('confirmed') so the fulfilment test can ship it.
+    `insert into public.vendor_orders (order_id, vendor_id, vendor_order_number, status, currency, subtotal_minor, shipping_minor, total_minor,
         commission_rate_bps, commission_minor, payment_fee_minor, vendor_earnings_minor)
-     values ($1, $2, $3, 'USD', $4, 1000, $5, $6, $7, 0, $8) returning id`,
+     values ($1, $2, $3, 'confirmed', 'USD', $4, 1000, $5, $6, $7, 0, $8) returning id`,
     [
       order.id,
       vendorA,
@@ -170,8 +171,9 @@ describe("multi-vendor order model", () => {
       expect(vendorOrders).toEqual([{ id: vendorOrderA }]);
       const items = await s.rows("select sku from public.order_items");
       expect(items).toEqual([{ sku: "SKU-A" }]);
+      // Phase 3: the parent order carries other vendors' totals, so vendors cannot read it.
       const parent = await s.rows("select id, customer_email from public.orders");
-      expect(parent).toHaveLength(1);
+      expect(parent).toEqual([]);
       expect(await s.rows("select * from public.payments")).toEqual([]);
     });
     await asUser(pool, ownerB, async (s) => {
@@ -203,7 +205,7 @@ describe("multi-vendor order model", () => {
 
   it("gives admins full visibility and lets them record refunds", async () => {
     await asUser(pool, admin, async (s) => {
-      expect(await s.rows("select id from public.vendor_orders")).toHaveLength(2);
+      expect(await s.rows("select id from public.vendor_orders where order_id = $1", [orderId])).toHaveLength(2);
       const payment = await s.one<{ id: string }>("select id from public.payments where order_id = $1", [orderId]);
       const refund = await s.one<{ status: string }>(
         `insert into public.refunds (order_id, vendor_order_id, payment_id, currency, amount_minor, commission_reversed_minor, vendor_debit_minor, reason, requested_by)

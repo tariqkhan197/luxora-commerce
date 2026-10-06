@@ -79,7 +79,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             ) : null}
           </div>
 
-          <VariantSelector variants={variants} currency={listing.currency ?? "USD"} />
+          <VariantSelector variants={variants} currency={listing.currency ?? "USD"} returnPath={ROUTES.product(slug)} />
 
           {product.description ? (
             <section className="border-t border-line pt-6">

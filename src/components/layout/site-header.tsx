@@ -3,6 +3,7 @@ import { Heart, Search, ShoppingBag } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { getCartItemCount } from "@/features/cart/queries";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { AccountMenu } from "./account-menu";
 import { MobileNav } from "./mobile-nav";
@@ -15,6 +16,7 @@ export const PRIMARY_NAV = [
 
 export async function SiteHeader() {
   const current = await getCurrentUser();
+  const bagCount = current ? await getCartItemCount() : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-canvas/85 backdrop-blur-md">
@@ -48,9 +50,20 @@ export async function SiteHeader() {
               <Heart />
             </Link>
           </Button>
-          <Button asChild variant="ghost" size="icon" aria-label="Bag">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            aria-label={bagCount ? `Bag, ${bagCount} items` : "Bag"}
+            className="relative"
+          >
             <Link href={ROUTES.cart}>
               <ShoppingBag />
+              {bagCount ? (
+                <span className="absolute -top-0.5 -right-0.5 flex min-w-4.5 items-center justify-center rounded-full bg-ink px-1 text-[0.625rem] leading-4.5 font-medium text-canvas tabular-nums">
+                  {bagCount > 99 ? "99+" : bagCount}
+                </span>
+              ) : null}
             </Link>
           </Button>
           {current ? (

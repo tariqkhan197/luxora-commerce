@@ -21,6 +21,7 @@ export type Database = {
           state: string | null;
           type: Database["public"]["Enums"]["address_type"];
           updated_at: string;
+          address_snapshot: Json | null;
         };
         Insert: {
           city: string;
@@ -1369,6 +1370,8 @@ export type Database = {
       };
       order_items: {
         Row: {
+          commission_minor: number;
+          commission_rate_bps: number;
           created_at: string;
           discount_minor: number;
           fulfilled_quantity: number;
@@ -1391,6 +1394,8 @@ export type Database = {
           vendor_order_id: string;
         };
         Insert: {
+          commission_minor?: number;
+          commission_rate_bps?: number;
           created_at?: string;
           discount_minor?: number;
           fulfilled_quantity?: number;
@@ -1413,6 +1418,8 @@ export type Database = {
           vendor_order_id: string;
         };
         Update: {
+          commission_minor?: number;
+          commission_rate_bps?: number;
           created_at?: string;
           discount_minor?: number;
           fulfilled_quantity?: number;
@@ -1491,6 +1498,7 @@ export type Database = {
           billing_address: NonNullable<Json>;
           cancellation_reason: string | null;
           cancelled_at: string | null;
+          checkout_token: string | null;
           completed_at: string | null;
           confirmed_at: string | null;
           coupon_code: string | null;
@@ -1505,6 +1513,7 @@ export type Database = {
           order_number: string;
           payment_status: Database["public"]["Enums"]["payment_status"];
           placed_at: string;
+          reservation_expires_at: string | null;
           shipping_address: NonNullable<Json>;
           shipping_minor: number;
           status: Database["public"]["Enums"]["order_status"];
@@ -1517,6 +1526,7 @@ export type Database = {
           billing_address: NonNullable<Json>;
           cancellation_reason?: string | null;
           cancelled_at?: string | null;
+          checkout_token?: string | null;
           completed_at?: string | null;
           confirmed_at?: string | null;
           coupon_code?: string | null;
@@ -1531,6 +1541,7 @@ export type Database = {
           order_number?: string;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           placed_at?: string;
+          reservation_expires_at?: string | null;
           shipping_address: NonNullable<Json>;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["order_status"];
@@ -1543,6 +1554,7 @@ export type Database = {
           billing_address?: NonNullable<Json>;
           cancellation_reason?: string | null;
           cancelled_at?: string | null;
+          checkout_token?: string | null;
           completed_at?: string | null;
           confirmed_at?: string | null;
           coupon_code?: string | null;
@@ -1557,6 +1569,7 @@ export type Database = {
           order_number?: string;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           placed_at?: string;
+          reservation_expires_at?: string | null;
           shipping_address?: NonNullable<Json>;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["order_status"];
@@ -2714,6 +2727,7 @@ export type Database = {
           order_id: string;
           payment_fee_minor: number;
           shipped_at: string | null;
+          shipping_address: Json | null;
           shipping_minor: number;
           status: Database["public"]["Enums"]["vendor_order_status"];
           subtotal_minor: number;
@@ -2741,6 +2755,7 @@ export type Database = {
           order_id: string;
           payment_fee_minor?: number;
           shipped_at?: string | null;
+          shipping_address?: Json | null;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["vendor_order_status"];
           subtotal_minor?: number;
@@ -2768,6 +2783,7 @@ export type Database = {
           order_id?: string;
           payment_fee_minor?: number;
           shipped_at?: string | null;
+          shipping_address?: Json | null;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["vendor_order_status"];
           subtotal_minor?: number;
@@ -3152,6 +3168,8 @@ export type Database = {
       };
     };
     Functions: {
+      add_to_cart: { Args: { p_quantity?: number; p_variant_id: string }; Returns: number };
+      address_snapshot: { Args: { p_address: Database["public"]["Tables"]["addresses"]["Row"] }; Returns: Json };
       adjust_inventory: {
         Args: {
           p_quantity_delta: number;
@@ -3185,8 +3203,39 @@ export type Database = {
         Args: { p_application_id: string; p_commission_rate_bps?: number; p_slug: string };
         Returns: string;
       };
+      assert_variant_purchasable: {
+        Args: { p_currency: string; p_quantity: number; p_variant_id: string };
+        Returns: number;
+      };
       calculate_commission_minor: { Args: { p_base_minor: number; p_rate_bps: number }; Returns: number };
+      cancel_pending_order: { Args: { p_order_id: string }; Returns: undefined };
+      cart_lines: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          added_price_minor: number;
+          cart_item_id: string;
+          currency: string;
+          image_path: string;
+          line_total_minor: number;
+          max_quantity: number;
+          options: Json;
+          product_id: string;
+          product_name: string;
+          product_slug: string;
+          purchasable: boolean;
+          quantity: number;
+          sku: string;
+          store_slug: string;
+          unavailable_reason: string;
+          unit_price_minor: number;
+          variant_id: string;
+          variant_title: string;
+          vendor_id: string;
+          vendor_name: string;
+        }[];
+      };
       cart_owner_profile_id: { Args: { p_cart_id: string }; Returns: string };
+      clear_cart: { Args: Record<PropertyKey, never>; Returns: undefined };
       commit_reserved_inventory: {
         Args: { p_quantity: number; p_reference_id: string; p_variant_id: string };
         Returns: {
@@ -3209,6 +3258,18 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      confirm_order_payment: {
+        Args: {
+          p_amount_minor: number;
+          p_currency: string;
+          p_fee_minor?: number;
+          p_order_id: string;
+          p_provider: Database["public"]["Enums"]["payment_provider"];
+          p_provider_payment_id: string;
+          p_raw_payload?: Json;
+        };
+        Returns: string;
+      };
       current_account_status: {
         Args: Record<PropertyKey, never>;
         Returns: Database["public"]["Enums"]["account_status"];
@@ -3216,12 +3277,80 @@ export type Database = {
       current_profile_id: { Args: Record<PropertyKey, never>; Returns: string };
       current_user_role: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_role"] };
       current_vendor_ids: { Args: Record<PropertyKey, never>; Returns: string[] };
+      expire_stale_checkouts: { Args: { p_variant_ids?: string[] }; Returns: number };
       flash_sale_is_live: { Args: { p_flash_sale_id: string }; Returns: boolean };
       flash_sale_vendor_id: { Args: { p_flash_sale_id: string }; Returns: string };
       generate_order_number: { Args: Record<PropertyKey, never>; Returns: string };
       has_vendor_role: {
         Args: { p_roles: Database["public"]["Enums"]["vendor_member_role"][]; p_vendor_id: string };
         Returns: boolean;
+      };
+      in_trusted_context: { Args: Record<PropertyKey, never>; Returns: boolean };
+      inventory_commit_internal: {
+        Args: { p_quantity: number; p_reference_id: string; p_variant_id: string };
+        Returns: {
+          allow_backorder: boolean;
+          available_quantity: number | null;
+          created_at: string;
+          id: string;
+          low_stock_threshold: number;
+          reserved_quantity: number;
+          stock_quantity: number;
+          track_inventory: boolean;
+          updated_at: string;
+          variant_id: string;
+          vendor_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "inventory";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      inventory_release_internal: {
+        Args: { p_quantity: number; p_variant_id: string };
+        Returns: {
+          allow_backorder: boolean;
+          available_quantity: number | null;
+          created_at: string;
+          id: string;
+          low_stock_threshold: number;
+          reserved_quantity: number;
+          stock_quantity: number;
+          track_inventory: boolean;
+          updated_at: string;
+          variant_id: string;
+          vendor_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "inventory";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      inventory_reserve_internal: {
+        Args: { p_quantity: number; p_variant_id: string };
+        Returns: {
+          allow_backorder: boolean;
+          available_quantity: number | null;
+          created_at: string;
+          id: string;
+          low_stock_threshold: number;
+          reserved_quantity: number;
+          stock_quantity: number;
+          track_inventory: boolean;
+          updated_at: string;
+          variant_id: string;
+          vendor_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "inventory";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_privileged_session: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -3275,6 +3404,16 @@ export type Database = {
       };
       order_customer_id: { Args: { p_order_id: string }; Returns: string };
       payout_vendor_id: { Args: { p_payout_id: string }; Returns: string };
+      place_order: {
+        Args: {
+          p_billing_address_id: string;
+          p_checkout_token: string;
+          p_customer_note?: string;
+          p_expected_total_minor?: number;
+          p_shipping_address_id: string;
+        };
+        Returns: string;
+      };
       product_is_public: { Args: { p_product_id: string }; Returns: boolean };
       product_search_text: {
         Args: { p_description: string; p_name: string; p_short_description: string; p_tags: string[] };
@@ -3304,6 +3443,9 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      release_order_reservations_internal: { Args: { p_order_id: string; p_reason: string }; Returns: undefined };
+      remove_cart_item: { Args: { p_cart_item_id: string }; Returns: undefined };
+      require_active_customer: { Args: Record<PropertyKey, never>; Returns: string };
       reserve_inventory: {
         Args: { p_quantity: number; p_variant_id: string };
         Returns: {
@@ -3329,6 +3471,7 @@ export type Database = {
       resolve_commission_rate_bps: { Args: { p_category_id?: string; p_vendor_id: string }; Returns: number };
       review_customer_id: { Args: { p_review_id: string }; Returns: string };
       review_is_public: { Args: { p_review_id: string }; Returns: boolean };
+      set_cart_item_quantity: { Args: { p_cart_item_id: string; p_quantity: number }; Returns: number };
       set_vendor_status: {
         Args: { p_reason?: string; p_status: Database["public"]["Enums"]["vendor_status"]; p_vendor_id: string };
         Returns: {

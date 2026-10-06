@@ -108,7 +108,7 @@ export default async function AdminVendorsPage({ searchParams }: PageProps<"/adm
                         <ActionButton
                           size="sm"
                           variant="ghost"
-                          action={() => markApplicationUnderReview(application.id)}
+                          action={markApplicationUnderReview.bind(null, application.id)}
                         >
                           Mark under review
                         </ActionButton>

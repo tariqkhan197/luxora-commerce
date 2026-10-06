@@ -57,6 +57,7 @@ export const ROUTES = {
     vendor: (id: string) => `/admin/vendors/${id}`,
     products: "/admin/products",
     orders: "/admin/orders",
+    order: (id: string) => `/admin/orders/${id}`,
     customers: "/admin/customers",
     categories: "/admin/categories",
     brands: "/admin/brands",
