@@ -228,22 +228,13 @@ describe("multi-vendor order model", () => {
     );
   });
 
-  it("lets a customer request a return on their own item only", async () => {
+  it("keeps the superseded per-item returns table read-only (returns go through return requests)", async () => {
     await asUser(pool, customer, async (s) => {
       const item = await s.one<{ id: string }>("select id from public.order_items where sku = 'SKU-A'");
-      const row = await s.one<{ status: string }>(
-        `insert into public.returns (order_id, vendor_order_id, order_item_id, customer_id, vendor_id, quantity, reason)
-         values ($1, $2, $3, public.current_profile_id(), $4, 1, 'Wrong size') returning status`,
-        [orderId, vendorOrderA, item.id, vendorA],
-      );
-      expect(row.status).toBe("requested");
-    });
-    await asUser(pool, otherCustomer, async (s) => {
-      const { rows } = await pool.query("select id from public.order_items where sku = 'SKU-A'");
       await s.denied(
         `insert into public.returns (order_id, vendor_order_id, order_item_id, customer_id, vendor_id, quantity, reason)
-           values ($1, $2, $3, public.current_profile_id(), $4, 1, 'Not my order')`,
-        [orderId, vendorOrderA, rows[0].id, vendorA],
+         values ($1, $2, $3, public.current_profile_id(), $4, 1, 'Wrong size')`,
+        [orderId, vendorOrderA, item.id, vendorA],
       );
     });
   });

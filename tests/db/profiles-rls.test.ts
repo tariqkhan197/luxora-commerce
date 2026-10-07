@@ -91,7 +91,8 @@ describe("profiles", () => {
     const rows = await asAnon(pool, (s) =>
       s.rows<{ key: string }>("select key from public.platform_settings order by key"),
     );
-    expect(rows.map((r) => r.key)).toEqual(["platform.default_currency", "platform.name"]);
+    // returns.window_days (Phase 5) is customer-facing policy, so it is public.
+    expect(rows.map((r) => r.key)).toEqual(["platform.default_currency", "platform.name", "returns.window_days"]);
   });
 
   it("lets only super admins change platform settings", async () => {

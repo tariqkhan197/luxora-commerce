@@ -2512,6 +2512,7 @@ export type Database = {
           reason: string;
           requested_by: string | null;
           return_id: string | null;
+          return_request_id: string | null;
           shipping_minor: number;
           status: Database["public"]["Enums"]["refund_status"];
           updated_at: string;
@@ -2536,6 +2537,7 @@ export type Database = {
           reason: string;
           requested_by?: string | null;
           return_id?: string | null;
+          return_request_id?: string | null;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["refund_status"];
           updated_at?: string;
@@ -2560,6 +2562,7 @@ export type Database = {
           reason?: string;
           requested_by?: string | null;
           return_id?: string | null;
+          return_request_id?: string | null;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["refund_status"];
           updated_at?: string;
@@ -2603,7 +2606,193 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "refunds_return_request_id_fkey";
+            columns: ["return_request_id"];
+            isOneToOne: false;
+            referencedRelation: "return_requests";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "refunds_vendor_order_id_fkey";
+            columns: ["vendor_order_id"];
+            isOneToOne: false;
+            referencedRelation: "vendor_orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      return_request_items: {
+        Row: {
+          created_at: string;
+          id: string;
+          order_item_id: string;
+          quantity: number;
+          reason: string;
+          return_request_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          order_item_id: string;
+          quantity: number;
+          reason: string;
+          return_request_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          order_item_id?: string;
+          quantity?: number;
+          reason?: string;
+          return_request_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "return_request_items_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: false;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "return_request_items_return_request_id_fkey";
+            columns: ["return_request_id"];
+            isOneToOne: false;
+            referencedRelation: "return_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      return_requests: {
+        Row: {
+          approved_at: string | null;
+          cancelled_at: string | null;
+          carrier: string | null;
+          completed_at: string | null;
+          customer_id: string;
+          customer_note: string | null;
+          decided_by: string | null;
+          id: string;
+          inspection_notes: string | null;
+          order_id: string;
+          received_at: string | null;
+          received_by: string | null;
+          refund_id: string | null;
+          rejected_at: string | null;
+          rejection_reason: string | null;
+          requested_at: string;
+          restocked: boolean;
+          return_instructions: string | null;
+          rma_number: string;
+          shipped_at: string | null;
+          status: Database["public"]["Enums"]["return_status"];
+          tracking_number: string | null;
+          tracking_url: string | null;
+          updated_at: string;
+          vendor_id: string;
+          vendor_order_id: string;
+        };
+        Insert: {
+          approved_at?: string | null;
+          cancelled_at?: string | null;
+          carrier?: string | null;
+          completed_at?: string | null;
+          customer_id: string;
+          customer_note?: string | null;
+          decided_by?: string | null;
+          id?: string;
+          inspection_notes?: string | null;
+          order_id: string;
+          received_at?: string | null;
+          received_by?: string | null;
+          refund_id?: string | null;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
+          requested_at?: string;
+          restocked?: boolean;
+          return_instructions?: string | null;
+          rma_number: string;
+          shipped_at?: string | null;
+          status?: Database["public"]["Enums"]["return_status"];
+          tracking_number?: string | null;
+          tracking_url?: string | null;
+          updated_at?: string;
+          vendor_id: string;
+          vendor_order_id: string;
+        };
+        Update: {
+          approved_at?: string | null;
+          cancelled_at?: string | null;
+          carrier?: string | null;
+          completed_at?: string | null;
+          customer_id?: string;
+          customer_note?: string | null;
+          decided_by?: string | null;
+          id?: string;
+          inspection_notes?: string | null;
+          order_id?: string;
+          received_at?: string | null;
+          received_by?: string | null;
+          refund_id?: string | null;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
+          requested_at?: string;
+          restocked?: boolean;
+          return_instructions?: string | null;
+          rma_number?: string;
+          shipped_at?: string | null;
+          status?: Database["public"]["Enums"]["return_status"];
+          tracking_number?: string | null;
+          tracking_url?: string | null;
+          updated_at?: string;
+          vendor_id?: string;
+          vendor_order_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "return_requests_decided_by_fkey";
+            columns: ["decided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "return_requests_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "return_requests_received_by_fkey";
+            columns: ["received_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "return_requests_refund_id_fkey";
+            columns: ["refund_id"];
+            isOneToOne: false;
+            referencedRelation: "refunds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "return_requests_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "return_requests_vendor_order_id_fkey";
             columns: ["vendor_order_id"];
             isOneToOne: false;
             referencedRelation: "vendor_orders";
@@ -3838,6 +4027,7 @@ export type Database = {
         };
         Returns: string;
       };
+      approve_return_request: { Args: { p_instructions: string; p_return_id: string }; Returns: undefined };
       approve_vendor_application: {
         Args: { p_application_id: string; p_commission_rate_bps?: number; p_slug: string };
         Returns: string;
@@ -3873,7 +4063,9 @@ export type Database = {
         Returns: string;
       };
       calculate_commission_minor: { Args: { p_base_minor: number; p_rate_bps: number }; Returns: number };
+      can_manage_return: { Args: { p_vendor_id: string }; Returns: boolean };
       cancel_pending_order: { Args: { p_order_id: string }; Returns: undefined };
+      cancel_return_request: { Args: { p_return_id: string }; Returns: undefined };
       cart_lines: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -3969,6 +4161,7 @@ export type Database = {
           payment_id: string;
         }[];
       };
+      create_return_request: { Args: { p_items: Json; p_note?: string; p_vendor_order_id: string }; Returns: string };
       current_account_status: {
         Args: Record<PropertyKey, never>;
         Returns: Database["public"]["Enums"]["account_status"];
@@ -4082,6 +4275,11 @@ export type Database = {
         Args: { p_provider_refund_id: string; p_provider_status: string; p_refund_id: string };
         Returns: string;
       };
+      mark_return_received: { Args: { p_notes?: string; p_restock: boolean; p_return_id: string }; Returns: undefined };
+      mark_return_shipped: {
+        Args: { p_carrier: string; p_return_id: string; p_tracking_number: string; p_tracking_url?: string };
+        Returns: undefined;
+      };
       moderate_product: {
         Args: { p_approve: boolean; p_product_id: string; p_reason?: string };
         Returns: {
@@ -4177,6 +4375,7 @@ export type Database = {
         Args: { p_amount_minor: number; p_method: string; p_notes?: string; p_reference: string; p_vendor_id: string };
         Returns: string;
       };
+      reject_return_request: { Args: { p_reason: string; p_return_id: string }; Returns: undefined };
       reject_vendor_application: { Args: { p_application_id: string; p_reason: string }; Returns: undefined };
       release_inventory: {
         Args: { p_quantity: number; p_variant_id: string };
@@ -4221,6 +4420,16 @@ export type Database = {
           refund_id: string;
         }[];
       };
+      request_return_refund: {
+        Args: { p_include_shipping?: boolean; p_return_id: string };
+        Returns: {
+          amount_minor: number;
+          currency: string;
+          order_id: string;
+          provider_payment_id: string;
+          refund_id: string;
+        }[];
+      };
       require_active_customer: { Args: Record<PropertyKey, never>; Returns: string };
       reserve_inventory: {
         Args: { p_quantity: number; p_variant_id: string };
@@ -4252,6 +4461,19 @@ export type Database = {
           skipped: number;
         }[];
       };
+      return_eligibility: {
+        Args: { p_order_id: string };
+        Returns: {
+          eligible: boolean;
+          order_item_id: string;
+          returnable_quantity: number;
+          vendor_order_id: string;
+          window_ends_at: string;
+        }[];
+      };
+      return_request_visible: { Args: { p_return_id: string }; Returns: boolean };
+      return_window_days: { Args: Record<PropertyKey, never>; Returns: number };
+      returnable_quantity_internal: { Args: { p_exclude_request?: string; p_order_item_id: string }; Returns: number };
       reverse_vendor_payout: { Args: { p_payout_id: string; p_reason: string }; Returns: undefined };
       review_customer_id: { Args: { p_review_id: string }; Returns: string };
       review_is_public: { Args: { p_review_id: string }; Returns: boolean };
