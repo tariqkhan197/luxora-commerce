@@ -10,7 +10,7 @@ import { MobileNav } from "./mobile-nav";
 
 export const PRIMARY_NAV = [
   { label: "Shop", href: ROUTES.shop },
-  { label: "Brands", href: ROUTES.search + "?type=brands" },
+  { label: "Brands", href: ROUTES.brands },
   { label: "Sell on Luxora", href: ROUTES.vendor.root },
 ] as const;
 

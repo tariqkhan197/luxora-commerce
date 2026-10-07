@@ -129,6 +129,9 @@ export const asAnon = <T>(pool: pg.Pool, fn: (s: Session) => Promise<T>) => with
 export const asService = <T>(pool: pg.Pool, fn: (s: Session) => Promise<T>, commit = false) =>
   withSession(pool, { role: "service_role", commit }, fn);
 
+/** Vendor Terms version used by test applications (Release 4a requires one). */
+export const TEST_TERMS_VERSION = "test-terms-v1";
+
 /** PostgreSQL SQLSTATE codes we assert on. */
 export const SQLSTATE = {
   insufficientPrivilege: "42501",
@@ -161,11 +164,30 @@ export async function expectSqlError(promise: Promise<unknown>, code: string): P
 /** RLS denials surface as 42501 for both policy violations and missing grants. */
 export const expectDenied = (promise: Promise<unknown>) => expectSqlError(promise, SQLSTATE.insufficientPrivilege);
 
+/** Country used by test addresses; the shared test zone ships there for free. */
+export const TEST_SHIPPING_COUNTRY = "FR";
+
+/**
+ * Ensures the shared test shipping zone (France only) exists and returns its id.
+ * Release 4a requires every vendor in a bag to ship to the destination.
+ */
+export async function ensureTestShippingZone(pool: pg.Pool): Promise<string> {
+  await pool.query("insert into public.shipping_zones (name) values ('Test zone') on conflict do nothing");
+  const { rows } = await pool.query<{ id: string }>(
+    "select id from public.shipping_zones where lower(name) = 'test zone'",
+  );
+  await pool.query(
+    "insert into public.shipping_zone_countries (country_code, zone_id) values ($1, $2) on conflict do nothing",
+    [TEST_SHIPPING_COUNTRY, rows[0].id],
+  );
+  return rows[0].id;
+}
+
 /** Creates an approved vendor owned by `owner` with a published store. Runs as superuser. */
 export async function createApprovedVendor(
   pool: pg.Pool,
   owner: TestUser,
-  options: { commissionBps?: number | null; slug?: string } = {},
+  options: { commissionBps?: number | null; slug?: string; freeTestShipping?: boolean } = {},
 ): Promise<{ vendorId: string; storeId: string }> {
   const slug = options.slug ?? `vendor-${randomUUID().slice(0, 8)}`;
   const vendor = await pool.query<{ id: string }>(
@@ -184,6 +206,13 @@ export async function createApprovedVendor(
      values ($1, $2, $3, 'published', now()) returning id`,
     [vendorId, slug, slug],
   );
+  if (options.freeTestShipping ?? true) {
+    const zoneId = await ensureTestShippingZone(pool);
+    await pool.query(
+      "insert into public.vendor_shipping_rates (vendor_id, zone_id, first_item_minor, additional_item_minor) values ($1, $2, 0, 0)",
+      [vendorId, zoneId],
+    );
+  }
   return { vendorId, storeId: store.rows[0].id };
 }
 

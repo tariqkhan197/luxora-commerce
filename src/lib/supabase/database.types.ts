@@ -32,9 +32,13 @@ export type ProductImage = Tables<"product_images">;
 export type Inventory = Tables<"inventory">;
 export type InventoryMovement = Tables<"inventory_movements">;
 export type SubscriptionPlan = Tables<"subscription_plans">;
+export type ShippingZone = Tables<"shipping_zones">;
+export type ShippingZoneCountry = Tables<"shipping_zone_countries">;
+export type VendorShippingRate = Tables<"vendor_shipping_rates">;
 
 export type ProductListing = Database["public"]["Views"]["product_listings"]["Row"];
 export type ProductVariantAvailability = Database["public"]["Views"]["product_variant_availability"]["Row"];
+export type CheckoutShippingQuoteRow = Database["public"]["Functions"]["checkout_shipping_quote"]["Returns"][number];
 
 /** Type guard for jsonb columns that hold string→string option maps (variant options). */
 export function asOptionRecord(value: Json | null | undefined): Record<string, string> {

@@ -1,5 +1,13 @@
 import { z } from "zod";
-import { basisPointsSchema, currencyCodeSchema, optionalText, slugSchema, uuidSchema } from "./common";
+import {
+  basisPointsSchema,
+  currencyCodeSchema,
+  optionalText,
+  percentageInputSchema,
+  slugSchema,
+  urlSchema,
+  uuidSchema,
+} from "./common";
 
 // -----------------------------------------------------------------------------
 // Store (vendor storefront)
@@ -73,12 +81,12 @@ export type ProductDetailsInput = z.input<typeof productDetailsSchema>;
 export type ProductDetailsValues = z.output<typeof productDetailsSchema>;
 
 /** Money is entered as a decimal string in the UI and converted server-side. */
-const moneyInputSchema = z
+export const moneyInputSchema = z
   .string()
   .trim()
   .regex(/^\d{1,9}(\.\d{1,2})?$/, { error: "Enter an amount like 149.00." });
 
-const optionalMoneyInputSchema = optionalText(moneyInputSchema);
+export const optionalMoneyInputSchema = optionalText(moneyInputSchema);
 
 /** Variant options as a list of name/value pairs (e.g. Size: M, Colour: Black). */
 export const variantOptionsSchema = z
@@ -182,6 +190,52 @@ export const moderateProductSchema = z
     error: "A reason is required to reject a product.",
     path: ["reason"],
   });
+
+// -----------------------------------------------------------------------------
+// Admin taxonomy (categories and brands)
+// -----------------------------------------------------------------------------
+/** Whole number from a form field ("" → default). */
+const positionSchema = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? 0 : Number(value)),
+  z.number({ error: "Enter a whole number." }).int({ error: "Enter a whole number." }).min(0).max(100_000),
+);
+
+export const categorySchema = z.object({
+  id: optionalText(uuidSchema),
+  name: z.string().trim().min(2, { error: "Name must be at least 2 characters." }).max(120),
+  slug: slugSchema,
+  parentId: optionalText(uuidSchema),
+  description: optionalText(z.string().trim().max(1000, { error: "Keep the description under 1000 characters." })),
+  position: positionSchema,
+  isActive: z.boolean().default(true),
+  /** Percentage ("12.5"); blank inherits the vendor/platform rate. Converted to basis points. */
+  commissionRate: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    percentageInputSchema.optional(),
+  ),
+});
+export type CategoryInput = z.input<typeof categorySchema>;
+export type CategoryValues = z.output<typeof categorySchema>;
+
+export const brandSchema = z.object({
+  id: optionalText(uuidSchema),
+  name: z.string().trim().min(1, { error: "Name is required." }).max(120),
+  slug: slugSchema,
+  description: optionalText(z.string().trim().max(2000, { error: "Keep the description under 2000 characters." })),
+  websiteUrl: optionalText(urlSchema),
+  ownerVendorId: optionalText(uuidSchema),
+  isVerified: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+});
+export type BrandInput = z.input<typeof brandSchema>;
+export type BrandValues = z.output<typeof brandSchema>;
+
+export const catalogImageSchema = z.object({
+  id: uuidSchema,
+  path: storagePathSchema.nullable(),
+});
+
+export const setActiveSchema = z.object({ id: uuidSchema, active: z.boolean() });
 
 // -----------------------------------------------------------------------------
 // Public catalog queries

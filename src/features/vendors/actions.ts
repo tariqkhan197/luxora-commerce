@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { VENDOR_TERMS_VERSION } from "@/config/legal";
 import { ROUTES } from "@/config/routes";
 import { assertUser } from "@/lib/auth/dal";
 import { fromPostgrestError, runAction, type ActionResult } from "@/lib/errors";
@@ -28,6 +29,8 @@ export async function submitVendorApplication(input: unknown): Promise<ActionRes
         website_url: values.websiteUrl ?? null,
         description: values.description,
         product_categories: values.productCategories,
+        // Acceptance time is set by the database (record_vendor_terms_acceptance).
+        terms_version: VENDOR_TERMS_VERSION,
       })
       .select("id")
       .single();

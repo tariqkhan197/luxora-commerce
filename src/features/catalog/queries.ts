@@ -4,7 +4,7 @@ import { cache } from "react";
 import { fromPostgrestError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, ProductListing } from "@/lib/supabase/database.types";
-import type { CatalogQuery } from "@/lib/validation";
+import { uuidSchema, type CatalogQuery } from "@/lib/validation";
 import { toPrefixTsQuery } from "./helpers";
 
 export { categorySubtreeIds, toPrefixTsQuery } from "./helpers";
@@ -83,12 +83,36 @@ export const getCategories = cache(async (): Promise<Category[]> => {
   return data ?? [];
 });
 
-export const getBrands = cache(async () => {
+/** Active brands for the public brand index, alphabetically. */
+export async function listActiveBrands() {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("brands").select("id, slug, name").eq("is_active", true).order("name");
+  const { data, error } = await supabase
+    .from("brands")
+    .select("id, slug, name, logo_path, is_verified")
+    .eq("is_active", true)
+    .order("name");
   if (error) throw fromPostgrestError(error);
   return data ?? [];
-});
+}
+
+/**
+ * Brands a vendor may assign to products: its own brand(s) and brands no
+ * vendor owns (the same rule `enforce_product_brand_usage` applies). The
+ * product's current brand is kept in the list so editing never drops it.
+ */
+export async function getBrandsForVendor(vendorId: string, currentBrandId?: string | null) {
+  const vendor = uuidSchema.parse(vendorId);
+  const current = currentBrandId ? uuidSchema.parse(currentBrandId) : null;
+  const allowed = `and(is_active.eq.true,or(owner_vendor_id.is.null,owner_vendor_id.eq.${vendor}))`;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("brands")
+    .select("id, slug, name")
+    .or(current ? `${allowed},id.eq.${current}` : allowed)
+    .order("name");
+  if (error) throw fromPostgrestError(error);
+  return data ?? [];
+}
 
 export async function getProductBySlug(slug: string) {
   const supabase = await createClient();

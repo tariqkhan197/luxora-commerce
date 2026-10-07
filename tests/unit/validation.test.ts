@@ -92,6 +92,7 @@ describe("feature schemas", () => {
       businessPhone: "",
       websiteUrl: "https://atelier.test",
       description: "Small-batch outerwear made in Copenhagen since 2019.",
+      acceptTerms: true,
     });
     expect(valid.success).toBe(true);
     if (valid.success) expect(valid.data.productCategories).toEqual([]);

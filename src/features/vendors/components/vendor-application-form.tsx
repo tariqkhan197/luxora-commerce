@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
@@ -7,14 +8,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CheckboxField } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { VENDOR_TERMS_VERSION } from "@/config/legal";
+import { ROUTES } from "@/config/routes";
 import { applyActionError } from "@/lib/forms/apply-action-error";
 import { vendorApplicationSchema, type VendorApplicationInput, type VendorApplicationValues } from "@/lib/validation";
 import { submitVendorApplication } from "../actions";
 
-const FIELDS = ["businessName", "businessEmail", "businessPhone", "websiteUrl", "description"] as const;
+const FIELDS = ["businessName", "businessEmail", "businessPhone", "websiteUrl", "description", "acceptTerms"] as const;
 
 export function VendorApplicationForm({ defaultEmail }: { defaultEmail: string }) {
   const router = useRouter();
@@ -29,6 +33,7 @@ export function VendorApplicationForm({ defaultEmail }: { defaultEmail: string }
       websiteUrl: "",
       description: "",
       productCategories: [],
+      acceptTerms: false,
     },
   });
 
@@ -81,6 +86,23 @@ export function VendorApplicationForm({ defaultEmail }: { defaultEmail: string }
       >
         <Textarea rows={6} {...form.register("description")} />
       </FormField>
+      <div className="grid gap-2">
+        <CheckboxField
+          label="I have read and accept the Vendor Terms"
+          description={`Version ${VENDOR_TERMS_VERSION}. We record the version and the time you accept it.`}
+          {...form.register("acceptTerms")}
+        />
+        <p className="pl-7 text-xs">
+          <Link href={ROUTES.legal.vendorTerms} target="_blank" className="text-ink underline underline-offset-4">
+            Read the Vendor Terms
+          </Link>
+        </p>
+        {errors.acceptTerms?.message ? (
+          <p role="alert" className="pl-7 text-xs text-danger">
+            {errors.acceptTerms.message}
+          </p>
+        ) : null}
+      </div>
       <div className="flex items-center justify-between gap-4">
         <p className="text-xs text-ink-faint">
           Applications are reviewed by our team; we usually respond within a few days.

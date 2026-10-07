@@ -73,11 +73,21 @@ export default async function VendorOrderDetailPage({ params }: PageProps<"/vend
             <CardContent>
               <dl className="grid gap-2 text-sm">
                 <div className="flex justify-between">
+                  <dt className="text-ink-soft">Merchandise</dt>
+                  <dd className="tabular-nums">{formatMoney(order.subtotal_minor, currency)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-ink-soft">Shipping charged</dt>
+                  <dd className="tabular-nums">{formatMoney(order.shipping_minor, currency)}</dd>
+                </div>
+                <div className="flex justify-between">
                   <dt className="text-ink-soft">Order total</dt>
                   <dd className="tabular-nums">{formatMoney(order.total_minor, currency)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-ink-soft">Commission ({formatBasisPoints(order.commission_rate_bps)})</dt>
+                  <dt className="text-ink-soft">
+                    Commission on merchandise ({formatBasisPoints(order.commission_rate_bps)})
+                  </dt>
                   <dd className="tabular-nums">−{formatMoney(order.commission_minor, currency)}</dd>
                 </div>
                 <div className="flex justify-between">

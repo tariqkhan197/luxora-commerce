@@ -165,3 +165,14 @@ export function formatBasisPoints(rateBps: number): string {
   const fraction = rateBps % 100;
   return fraction === 0 ? `${whole}%` : `${whole}.${String(fraction).padStart(2, "0").replace(/0$/, "")}%`;
 }
+
+/** Minor units → plain decimal string for form inputs, e.g. 1250 USD → "12.50" (no float maths). */
+export function toDecimalInput(amountMinor: number | null | undefined, currency: string): string {
+  if (amountMinor === null || amountMinor === undefined) return "";
+  assertMinor(amountMinor);
+  const digits = currencyFractionDigits(currency);
+  if (digits === 0) return String(amountMinor);
+  const sign = amountMinor < 0 ? "-" : "";
+  const abs = String(Math.abs(amountMinor)).padStart(digits + 1, "0");
+  return `${sign}${abs.slice(0, -digits)}.${abs.slice(-digits)}`;
+}

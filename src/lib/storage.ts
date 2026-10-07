@@ -12,6 +12,7 @@ export const STORAGE_BUCKETS = {
   avatars: "avatars",
   reviewImages: "review-images",
   banners: "banners",
+  catalogAssets: "catalog-assets",
 } as const;
 
 export type StorageBucket = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];
@@ -44,6 +45,19 @@ export function isOwnedStoragePath(path: string, ownerId: string, options: { dep
   if (segments.length < 2 || segments.length > (options.depth ?? 3) + 1) return false;
   if (segments[0] !== ownerId) return false;
   return segments.slice(1).every((segment) => SAFE_SEGMENT.test(segment) && segment !== "." && segment !== "..");
+}
+
+export const CATALOG_ASSET_KINDS = ["categories", "brands"] as const;
+export type CatalogAssetKind = (typeof CATALOG_ASSET_KINDS)[number];
+
+/**
+ * Validates a `catalog-assets` path of the form `<kind>/<entityId>/<file>`
+ * (admin-managed category images and brand logos).
+ */
+export function isCatalogAssetPath(path: string, kind: CatalogAssetKind, entityId: string): boolean {
+  const segments = path.split("/");
+  if (segments.length !== 3 || segments[0] !== kind) return false;
+  return isOwnedStoragePath(segments.slice(1).join("/"), entityId, { depth: 1 });
 }
 
 /** Builds a public URL for an object in a public bucket. */

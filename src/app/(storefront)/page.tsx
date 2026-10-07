@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { StorageImage } from "@/components/shared/storage-image";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { STORAGE_BUCKETS } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 const PILLARS = [
@@ -23,7 +25,7 @@ export default async function HomePage() {
   const supabase = await createClient();
   const { data: categories } = await supabase
     .from("categories")
-    .select("id, slug, name, description")
+    .select("id, slug, name, description, image_path")
     .is("parent_id", null)
     .eq("is_active", true)
     .order("position", { ascending: true })
@@ -81,6 +83,15 @@ export default async function HomePage() {
                     href={ROUTES.category(category.slug)}
                     className="group flex h-full flex-col justify-between gap-10 p-6 transition-colors hover:bg-surface-muted"
                   >
+                    {category.image_path ? (
+                      <StorageImage
+                        bucket={STORAGE_BUCKETS.catalogAssets}
+                        path={category.image_path}
+                        alt=""
+                        className="-mx-6 -mt-6 aspect-[4/3]"
+                        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                      />
+                    ) : null}
                     <span className="display-3 group-hover:text-accent">{category.name}</span>
                     <span className="line-clamp-2 text-sm text-ink-soft">
                       {category.description ?? "Discover the edit"}

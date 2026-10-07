@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { OrderStatusBadge, PaymentStatusBadge, VendorOrderStatusBadge } from "@/components/shared/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DUTIES_AND_TAXES_NOTICE } from "@/config/legal";
 import { ROUTES } from "@/config/routes";
 import { AddressBlock } from "@/features/addresses/components/address-card";
 import { addressLines, asAddress } from "@/features/addresses/format";
@@ -141,10 +142,12 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                   <dt className="text-ink-soft">Shipping</dt>
                   <dd className="tabular-nums">{formatMoney(order.shipping_minor, order.currency)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">Tax</dt>
-                  <dd className="tabular-nums">{formatMoney(order.tax_minor, order.currency)}</dd>
-                </div>
+                {order.tax_minor > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-ink-soft">Tax</dt>
+                    <dd className="tabular-nums">{formatMoney(order.tax_minor, order.currency)}</dd>
+                  </div>
+                ) : null}
                 <div className="mt-2 flex justify-between border-t border-line pt-3">
                   <dt className="font-medium">Total</dt>
                   <dd className="font-display text-xl tabular-nums">
@@ -152,6 +155,9 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                   </dd>
                 </div>
               </dl>
+              {order.tax_minor === 0 ? (
+                <p className="mt-3 text-xs leading-relaxed text-ink-faint">{DUTIES_AND_TAXES_NOTICE}</p>
+              ) : null}
             </CardContent>
           </Card>
           <Card>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
+import { DUTIES_AND_TAXES_NOTICE, STORE_CURRENCY } from "@/config/legal";
 import { ROUTES } from "@/config/routes";
 
 const FOOTER_GROUPS = [
@@ -24,6 +25,16 @@ const FOOTER_GROUPS = [
     links: [
       { label: "Sell on Luxora", href: ROUTES.vendor.root },
       { label: "Vendor portal", href: ROUTES.vendor.dashboard },
+      { label: "Vendor terms", href: ROUTES.legal.vendorTerms },
+    ],
+  },
+  {
+    heading: "Legal",
+    links: [
+      { label: "Terms of service", href: ROUTES.legal.terms },
+      { label: "Privacy policy", href: ROUTES.legal.privacy },
+      { label: "Shipping", href: ROUTES.legal.shipping },
+      { label: "Returns", href: ROUTES.legal.returns },
     ],
   },
 ] as const;
@@ -31,7 +42,7 @@ const FOOTER_GROUPS = [
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-surface">
-      <div className="container-editorial grid gap-12 py-16 md:grid-cols-[1.5fr_repeat(3,1fr)]">
+      <div className="container-editorial grid gap-12 py-16 sm:grid-cols-2 md:grid-cols-[1.5fr_repeat(4,1fr)]">
         <div className="max-w-xs">
           <Logo />
           <p className="mt-4 text-sm leading-relaxed text-ink-soft">
@@ -56,7 +67,9 @@ export function SiteFooter() {
       <div className="border-t border-line">
         <div className="container-editorial flex flex-col gap-2 py-6 text-xs text-ink-faint sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Luxora. All rights reserved.</p>
-          <p>Prices shown include applicable taxes where required by law.</p>
+          <p>
+            Prices in {STORE_CURRENCY}. {DUTIES_AND_TAXES_NOTICE}
+          </p>
         </div>
       </div>
     </footer>

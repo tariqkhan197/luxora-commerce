@@ -12,6 +12,7 @@ import { markApplicationUnderReview } from "@/features/admin/actions";
 import { ApproveApplicationDialog, RejectApplicationDialog } from "@/features/admin/components/application-review";
 import { requireRole } from "@/lib/auth/dal";
 import { fromPostgrestError } from "@/lib/errors";
+import { formatDateTimeUtc } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Vendors" };
@@ -27,7 +28,7 @@ export default async function AdminVendorsPage({ searchParams }: PageProps<"/adm
   const applicationsQuery = supabase
     .from("vendor_applications")
     .select(
-      "id, business_name, business_email, website_url, description, product_categories, status, created_at, profiles!vendor_applications_profile_id_fkey(full_name)",
+      "id, business_name, business_email, website_url, description, product_categories, status, created_at, terms_version, terms_accepted_at, profiles!vendor_applications_profile_id_fkey(full_name)",
     )
     .in("status", ["submitted", "under_review"])
     .order("created_at", { ascending: true });
@@ -79,6 +80,12 @@ export default async function AdminVendorsPage({ searchParams }: PageProps<"/adm
                     <dl className="grid grid-cols-2 gap-2 text-xs text-ink-soft">
                       <dt>Submitted</dt>
                       <dd className="text-ink">{dateFormat.format(new Date(application.created_at))}</dd>
+                      <dt>Vendor Terms</dt>
+                      <dd className="text-ink">
+                        {application.terms_version && application.terms_accepted_at
+                          ? `v${application.terms_version} · ${formatDateTimeUtc(application.terms_accepted_at)}`
+                          : "Not recorded"}
+                      </dd>
                       {application.website_url ? (
                         <>
                           <dt>Website</dt>

@@ -75,7 +75,15 @@ export function SignUpForm() {
           Create account
         </Button>
         <p className="text-xs leading-relaxed text-ink-faint">
-          By creating an account you agree to our terms of service and privacy policy.
+          By creating an account you agree to our{" "}
+          <Link href={ROUTES.legal.terms} className="underline underline-offset-4 hover:text-ink">
+            Terms of Service
+          </Link>{" "}
+          and acknowledge our{" "}
+          <Link href={ROUTES.legal.privacy} className="underline underline-offset-4 hover:text-ink">
+            Privacy Policy
+          </Link>
+          .
         </p>
       </form>
     </FormShell>

@@ -38,7 +38,7 @@ export default async function BrandPage({ params, searchParams }: PageProps<"/br
     <div className="container-editorial flex flex-col gap-8 py-12 md:py-16">
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
         <StorageImage
-          bucket={STORAGE_BUCKETS.vendorLogos}
+          bucket={STORAGE_BUCKETS.catalogAssets}
           path={brand.logo_path}
           alt={`${brand.name} logo`}
           className="size-24 shrink-0 rounded-lg"

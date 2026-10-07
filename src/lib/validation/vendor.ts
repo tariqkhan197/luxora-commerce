@@ -19,6 +19,8 @@ export const vendorApplicationSchema = z.object({
     .array(z.string().trim().min(1).max(60))
     .max(10, { error: "Choose up to 10 categories." })
     .default([]),
+  /** The version accepted is recorded server-side (VENDOR_TERMS_VERSION) with a database timestamp. */
+  acceptTerms: z.boolean().refine((value) => value, { error: "You must accept the Vendor Terms to apply." }),
 });
 
 export type VendorApplicationInput = z.input<typeof vendorApplicationSchema>;

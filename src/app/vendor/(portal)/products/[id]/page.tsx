@@ -12,7 +12,7 @@ import { ProductDetailsForm } from "@/features/catalog/components/product-detail
 import { ProductImagesManager } from "@/features/catalog/components/product-images-manager";
 import { ProductStatusActions } from "@/features/catalog/components/product-status-actions";
 import { VariantEditor } from "@/features/catalog/components/variant-editor";
-import { getBrands, getCategories } from "@/features/catalog/queries";
+import { getBrandsForVendor, getCategories } from "@/features/catalog/queries";
 import { requireVendorContext } from "@/lib/auth/dal";
 import { getClientEnv } from "@/lib/env";
 import { fromPostgrestError } from "@/lib/errors";
@@ -33,7 +33,6 @@ export default async function VendorProductDetailPage({ params }: PageProps<"/ve
     { data: variants, error: variantError },
     { data: images, error: imageError },
     categories,
-    brands,
   ] = await Promise.all([
     supabase.from("products").select("*").eq("id", id).eq("vendor_id", vendor.id).maybeSingle(),
     supabase
@@ -49,10 +48,15 @@ export default async function VendorProductDetailPage({ params }: PageProps<"/ve
       .order("is_primary", { ascending: false })
       .order("position"),
     getCategories(),
-    getBrands(),
   ]);
   if (error) throw fromPostgrestError(error);
   if (!product) notFound();
+  const brandList = await getBrandsForVendor(vendor.id, product.brand_id);
+  // Keep a brand that has since been deactivated selectable so saving does not silently clear it.
+  const brands =
+    product.brand_id && !brandList.some((brand) => brand.id === product.brand_id)
+      ? [...brandList, { id: product.brand_id, slug: "", name: "Current brand (no longer available)" }]
+      : brandList;
   if (variantError) throw fromPostgrestError(variantError);
   if (imageError) throw fromPostgrestError(imageError);
 
@@ -165,7 +169,14 @@ export default async function VendorProductDetailPage({ params }: PageProps<"/ve
         <CardContent>
           <ProductDetailsForm
             product={product}
-            categories={categoryOptions(categories)}
+            categories={
+              product.category_id && !categories.some((category) => category.id === product.category_id)
+                ? [
+                    ...categoryOptions(categories),
+                    { id: product.category_id, name: "Current category (no longer available)", depth: 0 },
+                  ]
+                : categoryOptions(categories)
+            }
             brands={brands}
             defaultCurrency={vendor.default_currency}
           />

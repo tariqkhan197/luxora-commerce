@@ -99,12 +99,12 @@ uses a sheet for navigation on small screens.
 
 ## Testing strategy
 
-| Suite       | Runner                              | What it proves                                                                                                                  |
-| ----------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `typecheck` | `next typegen && tsc`               | Strict types incl. generated route props                                                                                        |
-| `lint`      | ESLint (next/core-web-vitals + TS)  | Code quality                                                                                                                    |
-| `test:unit` | Vitest                              | Money, validation, error mapping, route guards, env validation                                                                  |
-| `test:db`   | Vitest + `pg` against PostgreSQL 16 | Every migration applies from scratch; RLS per role; inventory safety; order invariants; commission resolution; storage policies |
+| Suite       | Runner                              | What it proves                                                                                                                        |
+| ----------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `typecheck` | `next typegen && tsc`               | Strict types incl. generated route props                                                                                              |
+| `lint`      | ESLint (next/core-web-vitals + TS)  | Code quality                                                                                                                          |
+| `test:unit` | Vitest                              | Money, validation, error mapping, route guards (every static route has a page), env validation, checkout/shipping quote, legal config |
+| `test:db`   | Vitest + `pg` against PostgreSQL 16 | Every migration applies from scratch; RLS per role; inventory safety; order invariants; commission resolution; storage policies       |
 
 The DB suite applies `tests/db/supabase-shim.sql` (roles, `auth.uid()`, `storage.foldername()`) then all
 migrations, and impersonates API requests exactly like PostgREST: `SET LOCAL ROLE authenticated` +
@@ -143,6 +143,29 @@ The TypeScript quote (`src/features/checkout/quote.ts`) uses the integer money u
 totals the database will compute from the same catalog rows. It is never trusted: its total is sent as
 `expectedTotalMinor` and the database rejects a mismatch. Payment collection is behind the adapter interface in
 `src/lib/payments/provider.ts`; no adapter ships yet, so orders remain unpaid and expire.
+
+## Release 4a: taxonomy, shipping and legal
+
+```
+Admin   /admin/categories, /admin/brands ─► categories / brands (RLS: admins write; triggers: depth, delete guards, audit)
+Admin   /admin/shipping ─► admin_save_shipping_zone() ─► shipping_zones + shipping_zone_countries
+Vendor  /vendor/shipping ─► vendor_shipping_rates (owner/manager; one row per zone)
+Checkout page ─► checkout_shipping_quote(address) per address ─► quote.ts adds it up for display
+Browser ── address, token, total incl. shipping ──► place_order() ─► same cart_shipping_for_country() rules
+```
+
+Shipping follows the same rule as prices: **computed only in the database**. The checkout page asks
+`checkout_shipping_quote()` for each of the customer's shipping addresses (at most 20), and the client form
+switches the summary and the expected total with the selected address. `place_order()` recomputes shipping with
+the shared `cart_shipping_for_country()` and rejects any drift, so a rate change between page load and
+submission cannot be charged silently. Customers never read vendor rate rows, only the computed quote.
+
+Admin-managed catalog images live in the public `catalog-assets` bucket (`categories/<id>/…`, `brands/<id>/…`);
+the Server Action re-validates the path with `isCatalogAssetPath()` before saving it.
+
+Legal copy lives in `src/app/(storefront)/legal/*` and reads its company details and policy values from
+`src/config/legal.ts`. Company details are explicit placeholders until supplied; the pages show a draft notice
+while any remain. Tax is zero in 4a and every total carries "Duties and taxes may apply on delivery."
 
 ## Conventions
 

@@ -369,7 +369,7 @@ describe("place_order", () => {
         addressId,
         randomUUID(),
       ]);
-      expect(error.message).toContain("Prices in your bag have changed");
+      expect(error.message).toContain("Prices or shipping costs have changed");
     });
     const orderId = await placeOrder(customer, addressId, { expectedTotal: 6_000 });
     const { rows } = await pool.query("select total_minor from public.orders where id = $1", [orderId]);

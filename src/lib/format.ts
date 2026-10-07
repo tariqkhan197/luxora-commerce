@@ -8,3 +8,10 @@ const dateTimeUtc = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeSty
 export function formatDateTimeUtc(value: string | Date): string {
   return `${dateTimeUtc.format(typeof value === "string" ? new Date(value) : value)} UTC`;
 }
+
+const dateLong = new Intl.DateTimeFormat("en", { dateStyle: "long", timeZone: "UTC" });
+
+/** Calendar date (e.g. a policy's "last updated" day), formatted in UTC: "October 7, 2026". */
+export function formatDate(value: string | Date): string {
+  return dateLong.format(typeof value === "string" ? new Date(value) : value);
+}

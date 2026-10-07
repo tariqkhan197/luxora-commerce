@@ -2514,6 +2514,62 @@ export type Database = {
         };
         Relationships: [];
       };
+      shipping_zone_countries: {
+        Row: {
+          country_code: string;
+          created_at: string;
+          zone_id: string;
+        };
+        Insert: {
+          country_code: string;
+          created_at?: string;
+          zone_id: string;
+        };
+        Update: {
+          country_code?: string;
+          created_at?: string;
+          zone_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shipping_zone_countries_zone_id_fkey";
+            columns: ["zone_id"];
+            isOneToOne: false;
+            referencedRelation: "shipping_zones";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      shipping_zones: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          is_active: boolean;
+          name: string;
+          position: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          position?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          position?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       stores: {
         Row: {
           cover_path: string | null;
@@ -2648,6 +2704,8 @@ export type Database = {
           reviewed_at: string | null;
           reviewed_by: string | null;
           status: Database["public"]["Enums"]["vendor_application_status"];
+          terms_accepted_at: string | null;
+          terms_version: string | null;
           updated_at: string;
           vendor_id: string | null;
           website_url: string | null;
@@ -2666,6 +2724,8 @@ export type Database = {
           reviewed_at?: string | null;
           reviewed_by?: string | null;
           status?: Database["public"]["Enums"]["vendor_application_status"];
+          terms_accepted_at?: string | null;
+          terms_version?: string | null;
           updated_at?: string;
           vendor_id?: string | null;
           website_url?: string | null;
@@ -2684,6 +2744,8 @@ export type Database = {
           reviewed_at?: string | null;
           reviewed_by?: string | null;
           status?: Database["public"]["Enums"]["vendor_application_status"];
+          terms_accepted_at?: string | null;
+          terms_version?: string | null;
           updated_at?: string;
           vendor_id?: string | null;
           website_url?: string | null;
@@ -2810,6 +2872,66 @@ export type Database = {
             columns: ["vendor_id"];
             isOneToOne: false;
             referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      vendor_shipping_rates: {
+        Row: {
+          additional_item_minor: number;
+          created_at: string;
+          currency: string;
+          first_item_minor: number;
+          free_shipping_threshold_minor: number | null;
+          id: string;
+          is_active: boolean;
+          max_delivery_days: number | null;
+          min_delivery_days: number | null;
+          updated_at: string;
+          vendor_id: string;
+          zone_id: string;
+        };
+        Insert: {
+          additional_item_minor?: number;
+          created_at?: string;
+          currency?: string;
+          first_item_minor: number;
+          free_shipping_threshold_minor?: number | null;
+          id?: string;
+          is_active?: boolean;
+          max_delivery_days?: number | null;
+          min_delivery_days?: number | null;
+          updated_at?: string;
+          vendor_id: string;
+          zone_id: string;
+        };
+        Update: {
+          additional_item_minor?: number;
+          created_at?: string;
+          currency?: string;
+          first_item_minor?: number;
+          free_shipping_threshold_minor?: number | null;
+          id?: string;
+          is_active?: boolean;
+          max_delivery_days?: number | null;
+          min_delivery_days?: number | null;
+          updated_at?: string;
+          vendor_id?: string;
+          zone_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vendor_shipping_rates_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_shipping_rates_zone_id_fkey";
+            columns: ["zone_id"];
+            isOneToOne: false;
+            referencedRelation: "shipping_zones";
             referencedColumns: ["id"];
           },
         ];
@@ -3199,6 +3321,17 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      admin_save_shipping_zone: {
+        Args: {
+          p_countries: string[];
+          p_description?: string;
+          p_is_active?: boolean;
+          p_name: string;
+          p_position?: number;
+          p_zone_id?: string;
+        };
+        Returns: string;
+      };
       approve_vendor_application: {
         Args: { p_application_id: string; p_commission_rate_bps?: number; p_slug: string };
         Returns: string;
@@ -3235,6 +3368,32 @@ export type Database = {
         }[];
       };
       cart_owner_profile_id: { Args: { p_cart_id: string }; Returns: string };
+      cart_shipping_for_country: {
+        Args: { p_country: string };
+        Returns: {
+          max_delivery_days: number;
+          min_delivery_days: number;
+          reason: string;
+          shippable: boolean;
+          shipping_minor: number;
+          vendor_id: string;
+          vendor_name: string;
+          zone_name: string;
+        }[];
+      };
+      checkout_shipping_quote: {
+        Args: { p_address_id: string };
+        Returns: {
+          max_delivery_days: number;
+          min_delivery_days: number;
+          reason: string;
+          shippable: boolean;
+          shipping_minor: number;
+          vendor_id: string;
+          vendor_name: string;
+          zone_name: string;
+        }[];
+      };
       clear_cart: { Args: Record<PropertyKey, never>; Returns: undefined };
       commit_reserved_inventory: {
         Args: { p_quantity: number; p_reference_id: string; p_variant_id: string };
@@ -3472,6 +3631,7 @@ export type Database = {
       review_customer_id: { Args: { p_review_id: string }; Returns: string };
       review_is_public: { Args: { p_review_id: string }; Returns: boolean };
       set_cart_item_quantity: { Args: { p_cart_item_id: string; p_quantity: number }; Returns: number };
+      set_category_active: { Args: { p_active: boolean; p_category_id: string }; Returns: number };
       set_vendor_status: {
         Args: { p_reason?: string; p_status: Database["public"]["Enums"]["vendor_status"]; p_vendor_id: string };
         Returns: {
@@ -3499,6 +3659,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      shipping_zone_for_country: { Args: { p_country: string }; Returns: string };
       storage_owner_segment: { Args: { p_name: string }; Returns: string };
       unpublish_product: {
         Args: { p_product_id: string };

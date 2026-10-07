@@ -103,7 +103,9 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           ) : null}
 
           <section className="border-t border-line pt-6 text-xs text-ink-faint">
-            {product.requires_shipping ? "Ships from the vendor's studio." : "No shipping required."}
+            {product.requires_shipping
+              ? "Ships from the vendor's studio. Shipping is calculated at checkout."
+              : "No shipping required."}
             {listing.tags && listing.tags.length > 0 ? ` · ${listing.tags.join(" · ")}` : ""}
           </section>
         </div>

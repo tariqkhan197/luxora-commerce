@@ -25,8 +25,8 @@ async function submitApplication(user: TestUser, businessName: string) {
     user,
     (s) =>
       s.one<{ id: string }>(
-        `insert into public.vendor_applications (profile_id, business_name, business_email, description)
-         values (public.current_profile_id(), $1, $2, $3) returning id`,
+        `insert into public.vendor_applications (profile_id, business_name, business_email, description, terms_version)
+         values (public.current_profile_id(), $1, $2, $3, 'test-terms-v1') returning id`,
         [businessName, `${businessName.toLowerCase().replace(/\s+/g, "")}@test.luxora.local`, description],
       ),
     true,

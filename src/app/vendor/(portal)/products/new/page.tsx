@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
 import { categoryOptions } from "@/features/catalog/category-options";
 import { ProductDetailsForm } from "@/features/catalog/components/product-details-form";
-import { getBrands, getCategories } from "@/features/catalog/queries";
+import { getBrandsForVendor, getCategories } from "@/features/catalog/queries";
 import { requireVendorContext } from "@/lib/auth/dal";
 
 export const metadata: Metadata = { title: "New product" };
@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "New product" };
 export default async function VendorNewProductPage() {
   const { vendor } = await requireVendorContext(ROUTES.vendor.newProduct);
   if (vendor.status !== "approved") redirect(ROUTES.vendor.products);
-  const [categories, brands] = await Promise.all([getCategories(), getBrands()]);
+  const [categories, brands] = await Promise.all([getCategories(), getBrandsForVendor(vendor.id)]);
 
   return (
     <div className="flex flex-col gap-8">

@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
+import { getVendorShippingSetup } from "@/features/shipping/queries";
 import { StoreBranding } from "@/features/vendors/components/store-branding";
 import { StoreSettingsForm } from "@/features/vendors/components/store-settings-form";
 import { setStorePublished } from "@/features/vendors/store-actions";
@@ -21,7 +22,10 @@ export const metadata: Metadata = { title: "Storefront" };
 export default async function VendorStorefrontPage() {
   const { vendor, memberRole } = await requireVendorContext(ROUTES.vendor.storefront);
   const supabase = await createClient();
-  const { data: store, error } = await supabase.from("stores").select("*").eq("vendor_id", vendor.id).maybeSingle();
+  const [{ data: store, error }, { canShip }] = await Promise.all([
+    supabase.from("stores").select("*").eq("vendor_id", vendor.id).maybeSingle(),
+    getVendorShippingSetup(vendor.id),
+  ]);
   if (error) throw fromPostgrestError(error);
 
   const supabaseUrl = getClientEnv().NEXT_PUBLIC_SUPABASE_URL;
@@ -90,7 +94,9 @@ export default async function VendorStorefrontPage() {
                   ? "Your store is live. Customers can browse your active products."
                   : vendor.status !== "approved"
                     ? "Publishing requires an approved vendor account."
-                    : "Your store is hidden until you publish it."}
+                    : !canShip
+                      ? "Set up shipping for at least one zone before publishing your store."
+                      : "Your store is hidden until you publish it."}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-start gap-3">
@@ -107,12 +113,17 @@ export default async function VendorStorefrontPage() {
                 ) : (
                   <ActionButton
                     size="sm"
-                    disabled={vendor.status !== "approved"}
+                    disabled={vendor.status !== "approved" || !canShip}
                     action={setStorePublished.bind(null, { publish: true })}
                   >
                     Publish store
                   </ActionButton>
                 )
+              ) : null}
+              {store?.status !== "published" && !canShip ? (
+                <Button asChild variant="link" className="h-auto p-0 text-sm">
+                  <Link href={ROUTES.vendor.shipping}>Set up shipping →</Link>
+                </Button>
               ) : null}
               {store?.status === "published" ? (
                 <Button asChild variant="link" className="h-auto p-0 text-sm">

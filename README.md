@@ -4,9 +4,10 @@ Luxora is a premium multi-vendor marketplace for fashion and lifestyle brands. A
 independent vendors in a single checkout; each vendor fulfils and is paid for its own part of the order; the
 platform earns commissions, subscriptions and paid placements.
 
-This repository has completed **Phase 1 — Foundation**, **Phase 2 — Vendor onboarding & catalog** and
-**Phase 3 — Cart, checkout & orders**. Customers can build a multi-vendor bag, manage addresses and place an
-order that is split into one vendor order per brand with stock reserved. **Online payment is not enabled yet:**
+This repository has completed **Phase 1 — Foundation**, **Phase 2 — Vendor onboarding & catalog**,
+**Phase 3 — Cart, checkout & orders** and **Release 4a — taxonomy, shipping and legal**. Customers can build a
+multi-vendor bag, manage addresses and place an order that is split into one vendor order per brand with stock
+reserved and per-vendor shipping charged. **Online payment is not enabled yet:**
 orders are created as _awaiting payment_, nothing is charged, and unpaid reservations expire automatically.
 Payouts, refunds and promotions arrive in later phases; their routes exist and are protected, but deliberately
 render a "scheduled" notice instead of mock data.
@@ -174,13 +175,17 @@ and the database (RLS policies + triggers). Only the database layer is authorita
 | 1 ✅  | Foundation: schema, RLS, auth, roles, design system, routes, tests, docs                                                                                                                          |
 | 2 ✅  | Vendor application review and approval, store setup with logo/cover uploads, product/variant/image management, inventory UI on the safe stock functions, product moderation, public catalog pages |
 | 3 ✅  | Cart (database-priced), addresses, multi-vendor checkout with stock reservation and expiry, customer/vendor/admin order views, payment-provider boundary (no provider enabled yet)                |
-| 4     | Commissions ledger, payouts, refunds & returns workflows, coupons, flash sales, subscriptions                                                                                                     |
+| 4a ✅ | Admin category and brand management, shipping zones and vendor shipping rates in checkout, tax disclosure (tax = 0), legal pages and consent recording                                            |
+| 4b    | Stripe payments (Luxora as merchant of record), Stripe Tax, vendor payouts                                                                                                                        |
+| 4     | Commissions ledger, refunds & returns workflows, coupons, flash sales, subscriptions                                                                                                              |
 | 5     | Analytics, content management, loyalty, notifications, featured placements                                                                                                                        |
 
 ## Status
 
-Phases 1–3 are complete and verified (`npm run check`). The application is **not production-ready** yet: no
-payment provider is integrated, so orders cannot be paid, and shipping and tax are not calculated.
+Phases 1–3 and Release 4a are complete and verified (`npm run check`). The application is **not
+production-ready** yet: no payment provider is integrated, so orders cannot be paid; tax is not calculated
+(checkout states "Duties and taxes may apply on delivery."); and the company details on the legal pages are
+placeholders (see below).
 
 ### Phase 2 workflows
 
@@ -217,3 +222,37 @@ payment provider is integrated, so orders cannot be paid, and shipping and tax a
 - **Orders.** Customers see `/account/orders`; vendors see only their own vendor orders at `/vendor/orders` and can
   fulfil them only after payment; admins see everything at `/admin/orders`. Order prices, totals and commissions
   are immutable for every API role, admins and the service role included.
+
+### Release 4a workflows
+
+- **Categories.** `/admin/categories` manages the category tree (at most three levels, enforced by
+  `enforce_category_hierarchy`), category images (`catalog-assets` bucket) and per-category commission rates.
+  Deactivating a category cascades to its subcategories (`set_category_active()`); categories that have products
+  or subcategories cannot be deleted, only deactivated. Every change is audited (`category.*`, `commission.changed`).
+- **Brands.** `/admin/brands` manages brands, owners, logos and verification. Approving a vendor creates a brand in
+  the vendor's name owned by that vendor. Vendors can only use their own brand or brands with no owner
+  (`enforce_product_brand_usage`); brands in use cannot be deleted. `/brands` lists active brands publicly.
+- **Shipping zones.** `/admin/shipping` creates zones and assigns countries (each country belongs to one zone,
+  saved atomically by `admin_save_shipping_zone()`). Nothing is seeded for production: until an admin creates a
+  zone, Luxora ships nowhere. Zones that vendors have rates for cannot be deleted, only deactivated.
+- **Vendor shipping rates.** `/vendor/shipping` sets, per zone, a first-item price, an additional-item price, an
+  optional free-shipping threshold and a delivery estimate (USD). A store cannot be published until the vendor
+  ships to at least one active zone (`require_shipping_before_publish`).
+- **Shipping at checkout.** Shipping is computed only in the database: `checkout_shipping_quote(address)` for
+  display and `place_order()` for the charge, using the same `cart_shipping_for_country()` rules
+  (`0` when nothing needs shipping or the vendor subtotal reaches the free threshold, otherwise
+  `first + additional × (units − 1)`). Checkout is blocked for a country outside every active zone and for a
+  vendor without a rate there. Commission applies to merchandise only; shipping is part of vendor earnings.
+  Tax stays zero until Release 4b.
+- **Legal.** `/legal/terms`, `/legal/privacy`, `/legal/shipping`, `/legal/returns` and `/legal/vendor-terms`.
+  Return window: 14 days; the customer pays return shipping. Sign-up links the Terms and Privacy Policy; vendor
+  applications require accepting the Vendor Terms, and the database records the version with a server-side
+  timestamp.
+
+### Before launch: legal placeholders
+
+`src/config/legal.ts` holds `LEGAL_COMPANY_NAME`, `REGISTERED_BUSINESS_ADDRESS`, `CONTACT_EMAIL` and
+`GOVERNING_LAW` as clearly marked `[PLACEHOLDER: …]` values. While any of them is a placeholder, every legal page
+shows a "Draft — pending legal review" notice and highlights the missing values. Replace them with the real
+details (and have the documents reviewed) before launch; `tests/unit/legal-config.test.ts` must be updated in the
+same change. Bump `VENDOR_TERMS_VERSION` whenever the Vendor Terms change materially.

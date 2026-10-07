@@ -26,6 +26,7 @@ describe("storage buckets", () => {
     expect(rows).toEqual([
       { id: "avatars", public: true },
       { id: "banners", public: true },
+      { id: "catalog-assets", public: true },
       { id: "product-images", public: true },
       { id: "review-images", public: true },
       { id: "vendor-covers", public: true },

@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Store,
   TicketPercent,
+  Truck,
   Users,
 } from "lucide-react";
 import { navItem, PortalShell } from "@/components/layout/portal-shell";
@@ -28,6 +29,7 @@ const NAV = [
   navItem("Products", ROUTES.vendor.products, Package),
   navItem("Orders", ROUTES.vendor.orders, ShoppingCart),
   navItem("Inventory", ROUTES.vendor.inventory, Boxes),
+  navItem("Shipping", ROUTES.vendor.shipping, Truck),
   navItem("Customers", ROUTES.vendor.customers, Users),
   navItem("Analytics", ROUTES.vendor.analytics, BarChart3),
   navItem("Coupons", ROUTES.vendor.coupons, TicketPercent),

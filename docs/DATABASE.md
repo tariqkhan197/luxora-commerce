@@ -33,6 +33,9 @@ PostgreSQL (Supabase). Migrations in `supabase/migrations/`, applied in filename
 | `0011_grants`                                | Explicit privileges for `anon`, `authenticated`, `service_role`                                                                                                                                                     |
 | `0012_phase2_vendor_catalog_workflows`       | `products.search_vector`, vendor review and product moderation functions, `product_listings` and `product_variant_availability` views                                                                               |
 | `20261006000013_phase3_cart_checkout_orders` | Cart functions, shared stock helpers, `place_order()`, expiry and cancellation, `confirm_order_payment()`, immutable order financials, vendor fulfilment rules, tightened grants                                    |
+| `20261007000014_admin_taxonomy`              | `catalog-assets` bucket, category depth/cycle limits, delete guards for used categories/brands, `set_category_active()`, taxonomy audit trigger, brand usage rule, vendor brand created on approval                 |
+| `20261007000015_shipping_zones_rates`        | `shipping_zones`, `shipping_zone_countries`, `vendor_shipping_rates`, `admin_save_shipping_zone()`, publish gate, `checkout_shipping_quote()`, `place_order()` charging shipping                                    |
+| `20261007000016_legal_acceptance`            | `vendor_applications.terms_version` / `terms_accepted_at`, recorded by the database on submission                                                                                                                   |
 
 ## Entity relationships
 
@@ -130,15 +133,16 @@ Movements are immutable (`prevent_mutation` trigger).
 
 ## Storage buckets
 
-| Bucket             | Public | Path convention                   | Writers                |
-| ------------------ | ------ | --------------------------------- | ---------------------- |
-| `product-images`   | yes    | `<vendor_id>/<product_id>/<file>` | vendor members, admins |
-| `vendor-logos`     | yes    | `<vendor_id>/<file>`              | vendor members, admins |
-| `vendor-covers`    | yes    | `<vendor_id>/<file>`              | vendor members, admins |
-| `vendor-documents` | **no** | `<profile_id>/<file>`             | applicant; admins read |
-| `avatars`          | yes    | `<profile_id>/<file>`             | owner, admins          |
-| `review-images`    | yes    | `<profile_id>/<review_id>/<file>` | owner, admins          |
-| `banners`          | yes    | `<file>`                          | admins                 |
+| Bucket             | Public | Path convention                                | Writers                      |
+| ------------------ | ------ | ---------------------------------------------- | ---------------------------- |
+| `product-images`   | yes    | `<vendor_id>/<product_id>/<file>`              | vendor members, admins       |
+| `vendor-logos`     | yes    | `<vendor_id>/<file>`                           | vendor members, admins       |
+| `vendor-covers`    | yes    | `<vendor_id>/<file>`                           | vendor members, admins       |
+| `vendor-documents` | **no** | `<profile_id>/<file>`                          | applicant; admins read       |
+| `avatars`          | yes    | `<profile_id>/<file>`                          | owner, admins                |
+| `review-images`    | yes    | `<profile_id>/<review_id>/<file>`              | owner, admins                |
+| `banners`          | yes    | `<file>`                                       | admins                       |
+| `catalog-assets`   | yes    | `categories/<id>/<file>`, `brands/<id>/<file>` | admins (5 MB, raster images) |
 
 ## Workflow functions (Phase 2)
 
@@ -186,6 +190,36 @@ delegate to internal helpers that checkout shares, so there is one implementatio
   their `vendor_orders` row, which now carries a `shipping_address` snapshot for fulfilment.
 - Vendor status changes must move forward from a paid order: `confirmed → processing → shipped → delivered`.
   Pending (unpaid) orders cannot be fulfilled.
+
+## Taxonomy, shipping and consent (Release 4a)
+
+**Categories and brands.** Categories nest at most three levels deep; `enforce_category_hierarchy` rejects
+cycles and moves that would push a subtree past the limit. Categories with products or subcategories, and brands
+with products, cannot be deleted (`prevent_delete_used_*`); they are deactivated instead.
+`set_category_active(category, active)` (admin, security definer) deactivates a whole subtree and refuses to
+activate a child of an inactive parent. `audit_catalog_taxonomy` logs `category.created|updated|deleted`,
+`brand.created|updated|deleted` and `commission.changed` with the admin as actor.
+`enforce_product_brand_usage` lets vendors use only their own brand or a brand with no owner.
+`approve_vendor_application` now also creates a brand owned by the new vendor (slug clash → suffixed slug).
+
+**Shipping.** `shipping_zones` and `shipping_zone_countries` (a country is in at most one zone) are admin-managed;
+anyone can read active zones. `vendor_shipping_rates` (one per vendor and zone, USD minor units) are readable by
+vendor members and writable by owners and managers. Production starts with no zones.
+
+| Function                                                                               | Caller   | Effect                                                                                                                                                         |
+| -------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin_save_shipping_zone(name, countries, is_active, position, description, zone_id)` | admin    | Creates or updates a zone and replaces its country list atomically; rejects duplicate names and countries already in another zone. Audit `shipping_zone.saved` |
+| `checkout_shipping_quote(address)`                                                     | customer | Per-vendor shipping for the caller's bag to one of their own shipping addresses: amount, delivery estimate, or why it cannot ship                              |
+| `cart_shipping_for_country(country)`                                                   | internal | The shared calculation: `0` if no line needs shipping or the vendor subtotal reaches the free threshold, else `first + additional × (units − 1)`               |
+| `place_order(…)`                                                                       | customer | Now blocks unserved countries and vendors without a rate, and charges shipping per vendor order. `expected_total` includes shipping                            |
+
+Vendor orders store `shipping_minor`; `total = subtotal + shipping`; commission is calculated on merchandise
+only; `vendor_earnings = subtotal + shipping − commission − fees`. `tax_minor` stays `0` until Release 4b.
+`require_shipping_before_publish` stops a vendor publishing its store without an active rate in an active zone.
+
+**Consent.** `vendor_applications.terms_version` and `terms_accepted_at` are filled on submission by
+`record_vendor_terms_acceptance`: the version is required and the timestamp is always the database's `now()`,
+so it cannot be backdated by the client.
 
 ## Audit log
 

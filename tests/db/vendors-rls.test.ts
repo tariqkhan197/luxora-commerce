@@ -24,21 +24,21 @@ describe("vendor applications", () => {
   it("lets a customer submit an application for themselves only", async () => {
     await asUser(pool, applicant, async (s) => {
       await s.query(
-        `insert into public.vendor_applications (profile_id, business_name, business_email, description)
-         values (public.current_profile_id(), 'Atelier Nord', 'hello@atelier.test', $1)`,
+        `insert into public.vendor_applications (profile_id, business_name, business_email, description, terms_version)
+         values (public.current_profile_id(), 'Atelier Nord', 'hello@atelier.test', $1, 'test-terms-v1')`,
         [description],
       );
       const row = await s.one("select status, reviewed_by from public.vendor_applications");
       expect(row).toEqual({ status: "submitted", reviewed_by: null });
 
       await s.denied(
-        `insert into public.vendor_applications (profile_id, business_name, business_email, description)
-           values ($1, 'Fake', 'fake@x.test', $2)`,
+        `insert into public.vendor_applications (profile_id, business_name, business_email, description, terms_version)
+           values ($1, 'Fake', 'fake@x.test', $2, 'test-terms-v1')`,
         [stranger.profileId, description],
       );
       await s.denied(
-        `insert into public.vendor_applications (profile_id, business_name, business_email, description, status)
-           values (public.current_profile_id(), 'Self Approved', 'a@x.test', $1, 'approved')`,
+        `insert into public.vendor_applications (profile_id, business_name, business_email, description, status, terms_version)
+           values (public.current_profile_id(), 'Self Approved', 'a@x.test', $1, 'approved', 'test-terms-v1')`,
         [description],
       );
     });
@@ -50,8 +50,8 @@ describe("vendor applications", () => {
       applicant,
       (s) =>
         s.query(
-          `insert into public.vendor_applications (profile_id, business_name, business_email, description)
-           values (public.current_profile_id(), 'Atelier Nord', 'hello@atelier.test', $1)`,
+          `insert into public.vendor_applications (profile_id, business_name, business_email, description, terms_version)
+           values (public.current_profile_id(), 'Atelier Nord', 'hello@atelier.test', $1, 'test-terms-v1')`,
           [description],
         ),
       true,

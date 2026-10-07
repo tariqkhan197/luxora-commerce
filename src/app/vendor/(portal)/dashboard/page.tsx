@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
+import { getVendorShippingSetup } from "@/features/shipping/queries";
 import { requireVendorContext } from "@/lib/auth/dal";
 import { fromPostgrestError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
@@ -22,6 +23,7 @@ export default async function VendorDashboardPage() {
     { data: products, error: productsError },
     { data: store, error: storeError },
     { data: inventory, error: inventoryError },
+    shipping,
   ] = await Promise.all([
     supabase.from("products").select("status").eq("vendor_id", vendor.id),
     supabase.from("stores").select("slug, name, status").eq("vendor_id", vendor.id).maybeSingle(),
@@ -29,6 +31,7 @@ export default async function VendorDashboardPage() {
       .from("inventory")
       .select("available_quantity, low_stock_threshold, track_inventory")
       .eq("vendor_id", vendor.id),
+    getVendorShippingSetup(vendor.id),
   ]);
   if (productsError) throw fromPostgrestError(productsError);
   if (storeError) throw fromPostgrestError(storeError);
@@ -42,6 +45,7 @@ export default async function VendorDashboardPage() {
     number
   >;
   for (const product of products ?? []) counts[product.status] += 1;
+  const shippingZones = shipping.zones.filter((zone) => shipping.rates.get(zone.id)?.is_active).length;
 
   return (
     <div className="flex flex-col gap-8">
@@ -114,6 +118,22 @@ export default async function VendorDashboardPage() {
               <Link href={lowStock ? `${ROUTES.vendor.inventory}?filter=low` : ROUTES.vendor.inventory}>
                 Manage inventory
               </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Shipping</CardTitle>
+            <CardDescription>
+              {shippingZones
+                ? `You ship to ${shippingZones} of ${shipping.zones.length} zone${shipping.zones.length === 1 ? "" : "s"}.`
+                : "You do not ship anywhere yet. Your store cannot be published until you set up at least one zone."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" size="sm">
+              <Link href={ROUTES.vendor.shipping}>Manage shipping</Link>
             </Button>
           </CardContent>
         </Card>

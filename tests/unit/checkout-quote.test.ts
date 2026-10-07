@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildCheckoutQuote, unavailableLabel, type CartLine } from "@/features/checkout/quote";
+import {
+  buildCheckoutQuote,
+  deliveryEstimateLabel,
+  shippingBlockLabel,
+  unavailableLabel,
+  type CartLine,
+  type VendorShippingQuote,
+} from "@/features/checkout/quote";
 import { getPaymentProvider, PaymentConfigurationError, paymentsEnabled } from "@/lib/payments/provider";
 
 let counter = 0;
@@ -76,13 +83,81 @@ describe("buildCheckoutQuote", () => {
     expect(unavailableLabel({ unavailableReason: null, maxQuantity: 5 })).toBeNull();
   });
 
-  it("cannot check out an empty bag and charges no shipping or tax yet", () => {
+  it("cannot check out an empty bag; without an address shipping is calculated at checkout", () => {
     const quote = buildCheckoutQuote([]);
     expect(quote.canCheckout).toBe(false);
     expect(quote.total.amountMinor).toBe(0);
     const single = buildCheckoutQuote([line()]);
+    expect(single.shippingKnown).toBe(false);
     expect(single.shipping.amountMinor).toBe(0);
     expect(single.tax.amountMinor).toBe(0);
+    expect(single.total.amountMinor).toBe(single.subtotal.amountMinor);
+    expect(single.canCheckout).toBe(true);
+  });
+
+  it("adds the database shipping quote per vendor to the total (tax stays zero)", () => {
+    const shipping: VendorShippingQuote[] = [
+      { vendorId: "a", shippable: true, shippingMinor: 1_500, minDeliveryDays: 3, maxDeliveryDays: 7, reason: null },
+      { vendorId: "b", shippable: true, shippingMinor: 0, minDeliveryDays: null, maxDeliveryDays: null, reason: null },
+    ];
+    const quote = buildCheckoutQuote(
+      [
+        line({ vendorId: "a", unitPriceMinor: 12_345, addedPriceMinor: 12_345, quantity: 2 }),
+        line({ vendorId: "b", unitPriceMinor: 9_999, addedPriceMinor: 9_999 }),
+      ],
+      shipping,
+    );
+    expect(quote.shippingKnown).toBe(true);
+    expect(quote.groups.map((g) => [g.vendorId, g.shipping.amountMinor, g.deliveryDays])).toEqual([
+      ["a", 1_500, { min: 3, max: 7 }],
+      ["b", 0, null],
+    ]);
+    expect(quote.shipping.amountMinor).toBe(1_500);
+    expect(quote.tax.amountMinor).toBe(0);
+    expect(quote.total.amountMinor).toBe(34_689 + 1_500);
+    expect(quote.canCheckout).toBe(true);
+  });
+
+  it("blocks checkout when a vendor cannot ship to the address, or is missing from the quote", () => {
+    const blocked = buildCheckoutQuote(
+      [line({ vendorId: "a" }), line({ vendorId: "b", vendorName: "Maison B" })],
+      [
+        {
+          vendorId: "a",
+          shippable: true,
+          shippingMinor: 700,
+          minDeliveryDays: null,
+          maxDeliveryDays: null,
+          reason: null,
+        },
+        {
+          vendorId: "b",
+          shippable: false,
+          shippingMinor: 0,
+          minDeliveryDays: null,
+          maxDeliveryDays: null,
+          reason: "vendor_does_not_ship",
+        },
+      ],
+    );
+    expect(blocked.canCheckout).toBe(false);
+    expect(blocked.unshippableGroups.map((g) => g.vendorId)).toEqual(["b"]);
+    expect(blocked.total.amountMinor).toBe(2_000 + 700);
+
+    const missing = buildCheckoutQuote([line({ vendorId: "c" })], []);
+    expect(missing.canCheckout).toBe(false);
+    expect(missing.unshippableGroups[0].shippingReason).toBe("vendor_does_not_ship");
+  });
+
+  it("describes shipping blocks and delivery estimates", () => {
+    expect(shippingBlockLabel("country_not_served", "Maison B")).toBe("Luxora does not ship to this country yet.");
+    expect(shippingBlockLabel("vendor_does_not_ship", "Maison B")).toBe("Maison B does not ship to this address.");
+    expect(shippingBlockLabel(null, "Maison B")).toBeNull();
+    expect(deliveryEstimateLabel({ min: 3, max: 7 })).toBe("3–7 days");
+    expect(deliveryEstimateLabel({ min: 5, max: 5 })).toBe("5 days");
+    expect(deliveryEstimateLabel({ min: null, max: 10 })).toBe("Up to 10 days");
+    expect(deliveryEstimateLabel({ min: 2, max: null })).toBe("From 2 days");
+    expect(deliveryEstimateLabel(null)).toBeNull();
   });
 
   it("refuses to mix currencies", () => {
