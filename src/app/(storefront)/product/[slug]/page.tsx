@@ -5,8 +5,11 @@ import { ROUTES } from "@/config/routes";
 import { ProductGallery } from "@/features/catalog/components/product-gallery";
 import { VariantSelector } from "@/features/catalog/components/variant-selector";
 import { getProductBySlug } from "@/features/catalog/queries";
+import { ProductReviews } from "@/features/reviews/components/product-reviews";
+import { StarRating } from "@/features/reviews/components/star-rating";
 import { getClientEnv } from "@/lib/env";
 import { STORAGE_BUCKETS, storagePublicUrl } from "@/lib/storage";
+import { averageRating, parseReviewSort, ratingLabel } from "@/lib/validation";
 
 export async function generateMetadata({ params }: PageProps<"/product/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -22,11 +25,11 @@ function attributeEntries(value: unknown): [string, string][] {
     .map(([k, v]) => [k, String(v)]);
 }
 
-export default async function ProductPage({ params }: PageProps<"/product/[slug]">) {
-  const { slug } = await params;
+export default async function ProductPage({ params, searchParams }: PageProps<"/product/[slug]">) {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
   const result = await getProductBySlug(slug);
   if (!result) notFound();
-  const { listing, product, variants, images } = result;
+  const { productId, listing, product, variants, images } = result;
   const supabaseUrl = getClientEnv().NEXT_PUBLIC_SUPABASE_URL;
   const gallery = images
     .map((image) => ({
@@ -36,6 +39,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
     }))
     .filter((image): image is { id: string; url: string; alt: string } => Boolean(image.url));
   const attributes = attributeEntries(product.attributes);
+  const average = averageRating(listing.rating_sum, listing.review_count);
+  const reviewPage = Number.parseInt(typeof query.reviews === "string" ? query.reviews : "1", 10);
 
   return (
     <div className="container-editorial py-10 md:py-16">
@@ -66,6 +71,14 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               </Link>
             ) : null}
             <h1 className="mt-2 display-2">{listing.name}</h1>
+            {average !== null && listing.review_count ? (
+              <a href="#reviews" className="mt-3 inline-flex items-center gap-2 text-xs text-ink-soft hover:text-ink">
+                <StarRating value={average} label={ratingLabel(average, listing.review_count)} />
+                <span>
+                  {average.toFixed(1)} · {listing.review_count} {listing.review_count === 1 ? "review" : "reviews"}
+                </span>
+              </a>
+            ) : null}
             {listing.brand_slug && listing.brand_name ? (
               <p className="mt-2 text-sm text-ink-soft">
                 by{" "}
@@ -110,6 +123,15 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           </section>
         </div>
       </div>
+
+      <ProductReviews
+        productId={productId}
+        productName={listing.name ?? "This product"}
+        vendorName={listing.store_name}
+        slug={slug}
+        page={Number.isFinite(reviewPage) ? reviewPage : 1}
+        sort={parseReviewSort(query.sort)}
+      />
     </div>
   );
 }

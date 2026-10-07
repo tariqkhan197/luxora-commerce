@@ -14,6 +14,8 @@ import { OrderPaymentPanel } from "@/features/orders/components/order-payment-pa
 import { ReturnCard } from "@/features/returns/components/return-card";
 import { ReturnRequestDialog } from "@/features/returns/components/return-request-dialog";
 import { getReturnEligibility, listReturns } from "@/features/returns/queries";
+import { ReviewFormDialog } from "@/features/reviews/components/review-form-dialog";
+import { getReviewEligibility } from "@/features/reviews/queries";
 import { getOrderDetail } from "@/features/orders/queries";
 import { requireUser } from "@/lib/auth/dal";
 import { formatMoney } from "@/lib/money";
@@ -37,9 +39,10 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
   const order = await getOrderDetail(id);
   // RLS already hides other customers' orders; the explicit check also keeps admins on their own account view.
   if (!order || order.customer_id !== profile.id) notFound();
-  const [eligibility, returns] = await Promise.all([
+  const [eligibility, returns, reviewable] = await Promise.all([
     getReturnEligibility(order.id),
     listReturns({ orderId: order.id }),
+    getReviewEligibility(),
   ]);
 
   const vendorOrders = [...order.vendor_orders].sort((a, b) =>
@@ -109,6 +112,7 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
               </CardHeader>
               <CardContent>
                 <OrderLineItems items={vendorOrder.order_items} currency={order.currency} />
+                <ReviewPrompts items={vendorOrder.order_items} reviewable={reviewable} />
                 <p className="mt-2 flex justify-between border-t border-line pt-3 text-sm">
                   <span className="text-ink-soft">Shipment subtotal</span>
                   <span className="tabular-nums">{formatMoney(vendorOrder.total_minor, order.currency)}</span>
@@ -215,5 +219,32 @@ function ReturnButton({
       windowEndsLabel={windowEnds ? formatDateTimeUtc(new Date(windowEnds)) : "the end of the return window"}
       items={items}
     />
+  );
+}
+
+/** "Write a review" for delivered items of this shipment the customer can still review. */
+function ReviewPrompts({
+  items,
+  reviewable,
+}: {
+  items: { id: string; product_name: string }[];
+  reviewable: { order_item_id: string }[];
+}) {
+  const open = items.filter((item) => reviewable.some((row) => row.order_item_id === item.id));
+  if (!open.length) return null;
+  return (
+    <ul className="mt-3 grid gap-2 border-t border-line pt-3">
+      {open.map((item) => (
+        <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <span className="min-w-0 truncate text-ink-soft">How was {item.product_name}?</span>
+          <ReviewFormDialog
+            mode="create"
+            orderItemId={item.id}
+            productName={item.product_name}
+            triggerVariant="outline"
+          />
+        </li>
+      ))}
+    </ul>
   );
 }

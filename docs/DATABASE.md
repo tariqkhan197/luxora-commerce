@@ -41,6 +41,7 @@ PostgreSQL (Supabase). Migrations in `supabase/migrations/`, applied in filename
 | `20261008000019_refunds_ledgers`             | `refund_items`, `vendor_ledger_entries`, `platform_ledger_entries`, `payment_disputes`, refund/dispute/payout functions, `vendor_balances`, finance tables read-only for API roles                                     |
 | `20261008000020_tax_readiness`               | Tax codes on products, categories and order items (snapshot), `orders.tax_calculation_ref`; tax collection stays disabled                                                                                              |
 | `20261009000021_returns_rma`                 | `return_requests` + `return_request_items` (RMA per vendor order), customer/vendor/admin return functions, return refunds through `request_refund`, legacy `returns` table made read-only                              |
+| `20261010000022_reviews`                     | Verified-purchase reviews with pre-moderation, photos, vendor replies; `product_review_stats` totals; review writes function-only; `product_listings` gains `review_count`/`rating_sum`; review photo storage policies |
 
 ## Entity relationships
 
@@ -117,37 +118,40 @@ Movements are immutable (`prevent_mutation` trigger).
 
 ## Row Level Security summary
 
-| Table group                            | anon                       | customer (authenticated)        | vendor member                            | admin                           |
-| -------------------------------------- | -------------------------- | ------------------------------- | ---------------------------------------- | ------------------------------- |
-| `profiles`                             | —                          | own row (not role/status)       | own row                                  | all; promote → super_admin only |
-| `vendors`, `stores`                    | approved/published         | approved/published              | own (any status); edit presentation only | all                             |
-| `vendor_applications`                  | —                          | own; insert as `submitted`      | —                                        | all                             |
-| catalog (`products`, variants, images) | active of approved vendors | same                            | own in any status; cannot publish        | all                             |
-| `inventory`, movements                 | —                          | —                               | own; quantities via functions only       | read; functions                 |
-| `addresses`, carts, wishlists          | public wishlists           | own                             | own                                      | read                            |
-| `orders`                               | —                          | own                             | orders containing their vendor orders    | read/update                     |
-| `vendor_orders`, `order_items`         | —                          | own                             | own; fulfilment fields only              | read/update                     |
-| `payments`, `payment_transactions`     | —                          | own payments                    | **none**                                 | read                            |
-| `returns`                              | —                          | own; request                    | own vendor; review                       | all                             |
-| `refunds`, `commissions`, `payouts`    | —                          | own refunds                     | own (read)                               | all                             |
-| `coupons`                              | —                          | — (validated server-side)       | own vendor coupons                       | all                             |
-| `reviews`                              | approved                   | own; create/edit → re-moderated | on own products; reply only              | all                             |
-| content, banners, plans, placements    | active                     | active                          | active (+ own placements)                | all                             |
-| `audit_logs`, `analytics_events`       | —                          | —                               | own vendor events                        | read                            |
-| `platform_settings`                    | public keys                | public keys                     | public keys                              | read; super_admin writes        |
+| Table group                            | anon                       | customer (authenticated)    | vendor member                            | admin                           |
+| -------------------------------------- | -------------------------- | --------------------------- | ---------------------------------------- | ------------------------------- |
+| `profiles`                             | —                          | own row (not role/status)   | own row                                  | all; promote → super_admin only |
+| `vendors`, `stores`                    | approved/published         | approved/published          | own (any status); edit presentation only | all                             |
+| `vendor_applications`                  | —                          | own; insert as `submitted`  | —                                        | all                             |
+| catalog (`products`, variants, images) | active of approved vendors | same                        | own in any status; cannot publish        | all                             |
+| `inventory`, movements                 | —                          | —                           | own; quantities via functions only       | read; functions                 |
+| `addresses`, carts, wishlists          | public wishlists           | own                         | own                                      | read                            |
+| `orders`                               | —                          | own                         | orders containing their vendor orders    | read/update                     |
+| `vendor_orders`, `order_items`         | —                          | own                         | own; fulfilment fields only              | read/update                     |
+| `payments`, `payment_transactions`     | —                          | own payments                | **none**                                 | read                            |
+| `returns`                              | —                          | own; request                | own vendor; review                       | all                             |
+| `refunds`, `commissions`, `payouts`    | —                          | own refunds                 | own (read)                               | all                             |
+| `coupons`                              | —                          | — (validated server-side)   | own vendor coupons                       | all                             |
+| `reviews`, `review_images`             | approved                   | own (any status); functions | approved; reply via function             | read; moderate via function     |
+| content, banners, plans, placements    | active                     | active                      | active (+ own placements)                | all                             |
+| `audit_logs`, `analytics_events`       | —                          | —                           | own vendor events                        | read                            |
+| `platform_settings`                    | public keys                | public keys                 | public keys                              | read; super_admin writes        |
 
 ## Storage buckets
 
-| Bucket             | Public | Path convention                                | Writers                      |
-| ------------------ | ------ | ---------------------------------------------- | ---------------------------- |
-| `product-images`   | yes    | `<vendor_id>/<product_id>/<file>`              | vendor members, admins       |
-| `vendor-logos`     | yes    | `<vendor_id>/<file>`                           | vendor members, admins       |
-| `vendor-covers`    | yes    | `<vendor_id>/<file>`                           | vendor members, admins       |
-| `vendor-documents` | **no** | `<profile_id>/<file>`                          | applicant; admins read       |
-| `avatars`          | yes    | `<profile_id>/<file>`                          | owner, admins                |
-| `review-images`    | yes    | `<profile_id>/<review_id>/<file>`              | owner, admins                |
-| `banners`          | yes    | `<file>`                                       | admins                       |
-| `catalog-assets`   | yes    | `categories/<id>/<file>`, `brands/<id>/<file>` | admins (5 MB, raster images) |
+| Bucket             | Public | Path convention                                | Writers                       |
+| ------------------ | ------ | ---------------------------------------------- | ----------------------------- |
+| `product-images`   | yes    | `<vendor_id>/<product_id>/<file>`              | vendor members, admins        |
+| `vendor-logos`     | yes    | `<vendor_id>/<file>`                           | vendor members, admins        |
+| `vendor-covers`    | yes    | `<vendor_id>/<file>`                           | vendor members, admins        |
+| `vendor-documents` | **no** | `<profile_id>/<file>`                          | applicant; admins read        |
+| `avatars`          | yes    | `<profile_id>/<file>`                          | owner, admins                 |
+| `review-images`    | yes ¹  | `<profile_id>/<review_id>/<file>`              | author of that review, admins |
+| `banners`          | yes    | `<file>`                                       | admins                        |
+| `catalog-assets`   | yes    | `categories/<id>/<file>`, `brands/<id>/<file>` | admins (5 MB, raster images)  |
+
+¹ Files are served by URL (random paths), but object rows can be listed only by the author, admins, or once the
+photo belongs to a published review (Phase 6A).
 
 ## Workflow functions (Phase 2)
 
@@ -166,7 +170,8 @@ themselves and write the audit log.
 
 `product_listings` and `product_variant_availability` are owner views that bypass RLS, so their definitions
 restrict rows to active products of approved vendors. `product_listings` adds the price range, primary image,
-store, brand and category names, an `in_stock` flag and the `search_vector` used for prefix full-text search.
+store, brand and category names, an `in_stock` flag, the `search_vector` used for prefix full-text search and
+approved-review totals (`review_count`, `rating_sum`; Phase 6A).
 `product_variant_availability` exposes variants with `in_stock` and `is_low_stock` flags only, never quantities.
 
 ## Cart, checkout and payment functions (Phase 3)
@@ -270,6 +275,27 @@ transition is an audited security-definer function:
 Returnable quantity = bought − units in active returns − units refunded outside returns. A provider refund
 failure on a return's refund reopens the return (`received`) so it can be refunded again. The Phase 1 per-item
 `returns` table, whose policies allowed direct customer inserts and unrestricted vendor updates, is now read-only.
+
+## Reviews (Phase 6A)
+
+`reviews` and `review_images` are read-only for API roles: anyone reads approved reviews, authors their own in
+any state, admins all. `product_review_stats` holds approved-review totals per product (`review_count`,
+`rating_sum`, `rating_1`…`rating_5`), recomputed by trigger whenever a review's status, rating or product changes.
+Every write is an audited security-definer function:
+
+| Function                                                       | Caller                      | Effect                                                                                                 |
+| -------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `review_eligibility(product?)`                                 | customer                    | Delivered, paid purchases inside `reviews.window_days` (30) not yet reviewed, one row per product      |
+| `submit_review(order_item, rating, title, body)`               | customer                    | Verified purchase checks; one review per product; status `pending`; author name stored as "First L."   |
+| `update_review(id, rating, title, body)`                       | author                      | Any change → `pending` (out of the totals until re-approved)                                           |
+| `delete_review(id)`                                            | author                      | Deletes the review; returns photo paths for storage cleanup                                            |
+| `attach_review_image(id, path)` / `remove_review_image(image)` | author                      | Uploaded object under `<profile>/<review>/`, at most `reviews.max_images` (4); a new photo → `pending` |
+| `reply_to_review(id, reply)`                                   | vendor owner/manager        | One public reply on a published review (insert or edit)                                                |
+| `remove_review_reply(id)`                                      | vendor owner/manager, admin | Removes the reply                                                                                      |
+| `moderate_review(id, approve, reason)`                         | admin                       | `pending`/`rejected` → `approved`; `pending`/`approved` → `rejected` with a reason                     |
+
+The Phase 1 policies that let customers and vendors write reviews directly (guarded only by a column trigger)
+were dropped with that trigger.
 
 ## Audit log
 

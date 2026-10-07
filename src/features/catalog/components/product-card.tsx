@@ -5,6 +5,8 @@ import { ROUTES } from "@/config/routes";
 import { formatMoney } from "@/lib/money";
 import { STORAGE_BUCKETS } from "@/lib/storage";
 import type { ProductListing } from "@/lib/supabase/database.types";
+import { averageRating, ratingLabel } from "@/lib/validation";
+import { StarRating } from "@/features/reviews/components/star-rating";
 
 export function priceLabel(listing: Pick<ProductListing, "min_price_minor" | "max_price_minor" | "currency">): string {
   const currency = listing.currency ?? "USD";
@@ -19,6 +21,7 @@ export function ProductCard({ listing, priority }: { listing: ProductListing; pr
     listing.compare_at_price_minor !== null &&
     listing.min_price_minor !== null &&
     listing.compare_at_price_minor > listing.min_price_minor;
+  const average = averageRating(listing.rating_sum, listing.review_count);
 
   return (
     <article className="group flex flex-col gap-3">
@@ -56,6 +59,12 @@ export function ProductCard({ listing, priority }: { listing: ProductListing; pr
             </span>
           ) : null}
         </p>
+        {average !== null && listing.review_count ? (
+          <p className="flex items-center gap-1.5 text-xs text-ink-faint">
+            <StarRating value={average} label={ratingLabel(average, listing.review_count)} />
+            <span aria-hidden>({listing.review_count})</span>
+          </p>
+        ) : null}
       </div>
     </article>
   );

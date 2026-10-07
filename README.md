@@ -177,14 +177,15 @@ and the database (RLS policies + triggers). Only the database layer is authorita
 | 2 ✅  | Vendor application review and approval, store setup with logo/cover uploads, product/variant/image management, inventory UI on the safe stock functions, product moderation, public catalog pages |
 | 3 ✅  | Cart (database-priced), addresses, multi-vendor checkout with stock reservation and expiry, customer/vendor/admin order views, payment-provider boundary (no provider enabled yet)                |
 | 4a ✅ | Admin category and brand management, shipping zones and vendor shipping rates in checkout, tax disclosure (tax = 0), legal pages and consent recording                                            |
-| 4b    | Stripe payments (Luxora as merchant of record), Stripe Tax, vendor payouts                                                                                                                        |
+| 4b ✅ | Stripe payments in test mode (Luxora as merchant of record), refunds, disputes, vendor and platform ledgers, manual payouts, Stripe Tax readiness (tax disabled)                                  |
 | 5 ✅  | Customer returns (RMA): request within 14 days of delivery, vendor approval with return instructions, return tracking, receipt with restock, admin refund through Stripe (test mode)              |
-| 6     | Reviews, coupons, flash sales, subscriptions                                                                                                                                                      |
-| 5     | Analytics, content management, loyalty, notifications, featured placements                                                                                                                        |
+| 6A ✅ | Product reviews and ratings: verified buyers within 30 days of delivery, admin pre-moderation, up to 4 photos, one vendor reply, rating totals on product pages and cards                         |
+| 6B    | Promotions: coupons and flash sales                                                                                                                                                               |
+| 7     | Subscriptions, featured placements, analytics, content management, loyalty, notifications                                                                                                         |
 
 ## Status
 
-Phases 1–3, Release 4a and Phase 4b are complete and verified (`npm run check`). The application is **not
+Phases 1–3, Release 4a, Phase 4b, Phase 5 and Phase 6A are complete and verified (`npm run check`). The application is **not
 production-ready**: payments run in Stripe **test mode only** (live keys and live events are refused); tax is not
 collected (checkout states "Duties and taxes may apply on delivery."); and the company details on the legal pages
 are placeholders (see below).
@@ -291,3 +292,19 @@ Full runbook: [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
   and the refund is linked to the return. If the provider refund fails, the return reopens so it can be retried.
   Admins can also close a received return without a refund.
 - Pages: `/account/returns`, the order page ("Request a return"), `/vendor/returns`, `/admin/returns`.
+
+### Phase 6A workflows (reviews)
+
+- **Write.** Verified buyers only: a customer can review a product once its shipment has been delivered, within
+  `reviews.window_days` (30 days), from a paid order (later refunds or returns don't remove the right). One review
+  per product per customer. The order page and `/account/reviews` list what can still be reviewed.
+- **Moderate.** Every new or edited review is hidden until an administrator approves it at `/admin/reviews`.
+  Rejections carry a reason the customer sees; they can edit and resubmit. Published reviews can be taken down.
+- **Photos.** Up to 4 photos (JPEG/PNG/WebP, 5 MB) uploaded to `review-images/<profile>/<review>/`. They are
+  shown only once the review is published; adding a photo sends the review back to moderation.
+- **Reply.** Vendor owners and managers post one public reply per published review at `/vendor/reviews`. It
+  appears at once and can be edited or removed by the vendor; administrators can remove it too.
+- **Show.** Product pages show the average, the star breakdown and paginated reviews (newest, highest, lowest);
+  product cards show stars and count. Reviewers appear as "First L.", always marked as a verified purchase.
+- Customers can delete their own review at any time. There is no email notification yet (no email provider);
+  status is visible in the account.

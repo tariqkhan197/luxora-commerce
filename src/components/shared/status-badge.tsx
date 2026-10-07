@@ -109,3 +109,18 @@ const RETURN_LABEL: Partial<Record<Enums<"return_status">, string>> = {
 export function ReturnStatusBadge({ status }: { status: Enums<"return_status"> }) {
   return <Badge variant={RETURN[status]}>{RETURN_LABEL[status] ?? label(status)}</Badge>;
 }
+
+const REVIEW: Record<Enums<"review_status">, Variant> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "danger",
+};
+const REVIEW_LABEL: Record<Enums<"review_status">, string> = {
+  pending: "awaiting moderation",
+  approved: "published",
+  rejected: "not published",
+};
+
+export function ReviewStatusBadge({ status }: { status: Enums<"review_status"> }) {
+  return <Badge variant={REVIEW[status]}>{REVIEW_LABEL[status]}</Badge>;
+}

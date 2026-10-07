@@ -36,6 +36,10 @@ export default function PrivacyPage() {
             <strong className="text-ink">Shopping activity:</strong> the contents of your bag and the orders you place.
           </li>
           <li>
+            <strong className="text-ink">Reviews:</strong> the ratings, text and photos you submit about products you
+            bought.
+          </li>
+          <li>
             <strong className="text-ink">Vendor information:</strong> if you apply to sell, your business name, contact
             details, website and description, the date and version of the Vendor Terms you accepted, and the images and
             product information you upload.
@@ -65,6 +69,11 @@ export default function PrivacyPage() {
             parts of your order placed with other vendors, or your payment details.
           </li>
           <li>
+            <strong className="text-ink">Published reviews</strong> are public. They show your first name and last
+            initial, the option you bought and the date, never your full name or email address. The vendor of the
+            product can reply publicly.
+          </li>
+          <li>
             <strong className="text-ink">Our payment processor, Stripe,</strong> receives your payment details, your
             email address and the order&rsquo;s shipping address to take the payment and prevent fraud. Luxora does not
             receive or store your full card number; we keep the payment reference, amount and status.
@@ -87,6 +96,7 @@ export default function PrivacyPage() {
       <LegalSection title="Retention and your choices">
         <ul>
           <li>You can edit or delete your saved addresses and update your profile at any time from your account.</li>
+          <li>You can edit or delete your reviews and their photos at any time from your account.</li>
           <li>
             Order records are kept for as long as needed for accounting, tax and legal purposes, even if you close your
             account.

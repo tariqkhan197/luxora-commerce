@@ -143,7 +143,7 @@ export async function getProductBySlug(slug: string) {
   if (variantError) throw fromPostgrestError(variantError);
   if (imageError) throw fromPostgrestError(imageError);
 
-  return { listing, product, variants: variants ?? [], images: images ?? [] };
+  return { productId, listing, product, variants: variants ?? [], images: images ?? [] };
 }
 
 /** Lightweight search across stores and brands for the search page. */

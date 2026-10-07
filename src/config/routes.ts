@@ -46,6 +46,7 @@ export const ROUTES = {
     orders: "/vendor/orders",
     order: (id: string) => `/vendor/orders/${id}`,
     returns: "/vendor/returns",
+    reviews: "/vendor/reviews",
     inventory: "/vendor/inventory",
     shipping: "/vendor/shipping",
     customers: "/vendor/customers",

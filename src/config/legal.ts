@@ -44,6 +44,9 @@ export const LEGAL_DETAILS_PENDING = [
 /** Days after delivery within which a customer may request a return. */
 export const RETURN_WINDOW_DAYS = 14;
 
+/** Days after delivery within which a customer may review a purchased product (Phase 6A). */
+export const REVIEW_WINDOW_DAYS = 30;
+
 /** Who pays to send a returned item back. */
 export const RETURN_SHIPPING_PAID_BY = "customer" as const;
 
