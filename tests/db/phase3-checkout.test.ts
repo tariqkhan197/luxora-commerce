@@ -9,6 +9,7 @@ import {
   createApprovedVendor,
   createPool,
   createUser,
+  expectSqlError,
   SQLSTATE,
   TEST_DATABASE_URL,
   withSession,
@@ -151,7 +152,18 @@ describe("cart", () => {
     const { variantId } = await createActiveProduct(pool, vendorId, { stock: 2 });
     const unlimited = await createActiveProduct(pool, vendorId, { stock: 500 });
     const euro = await createActiveProduct(pool, vendorId, { stock: 5 });
-    await pool.query("update public.products set currency = 'EUR' where id = $1", [euro.productId]);
+    // Phase 4b: products can only be priced in the platform currency…
+    await expectSqlError(
+      pool.query("update public.products set currency = 'EUR' where id = $1", [euro.productId]),
+      SQLSTATE.raiseException,
+    );
+    // …so simulate a legacy non-USD product to keep testing the bag's own guard.
+    await pool.query("alter table public.products disable trigger products_enforce_platform_currency");
+    try {
+      await pool.query("update public.products set currency = 'EUR' where id = $1", [euro.productId]);
+    } finally {
+      await pool.query("alter table public.products enable trigger products_enforce_platform_currency");
+    }
 
     await asUser(pool, shopper, async (s) => {
       const tooMany = await s.fails(SQLSTATE.raiseException, "select public.add_to_cart($1, 3)", [variantId]);
@@ -564,7 +576,7 @@ describe("reservation lifecycle", () => {
     ).rows[0];
     expect(order).toEqual({
       status: "cancelled",
-      payment_status: "cancelled",
+      payment_status: "expired",
       cancellation_reason: "checkout_expired",
     });
     const vendorOrders = await pool.query("select status from public.vendor_orders where order_id = $1", [orderId]);
@@ -645,12 +657,13 @@ describe("reservation lifecycle", () => {
         [orderId],
       )
     ).rows[0];
+    // Phase 4b: the platform bears processing fees, so vendor earnings are untouched.
     expect(vendorOrder).toEqual({
       status: "confirmed",
       total_minor: "20000",
       commission_minor: "2000",
-      payment_fee_minor: "611",
-      vendor_earnings_minor: "17389",
+      payment_fee_minor: "0",
+      vendor_earnings_minor: "18000",
     });
     const transactions = (
       await pool.query(
@@ -670,17 +683,41 @@ describe("reservation lifecycle", () => {
     ).rows;
     expect(movements).toEqual([{ type: "sale", quantity_delta: -2, reference_id: orderId }]);
 
-    // A second confirmation is rejected; stock cannot go negative or double-commit.
-    await asService(pool, (s) =>
-      s.fails(
-        SQLSTATE.checkViolation,
-        "select public.confirm_order_payment($1, 'stripe', 'pi_test_again', 20000, 'USD', 0)",
-        [orderId],
-      ),
+    // Replaying the same payment is a no-op; a second, different payment for the
+    // same order is recorded for refund and never commits stock twice.
+    const replay = await asService(
+      pool,
+      (s) =>
+        s.one<{ outcome: string }>(
+          "select outcome from public.confirm_order_payment($1, 'stripe', 'pi_test_ok', 20000, 'USD', 611)",
+          [orderId],
+        ),
+      true,
     );
+    expect(replay.outcome).toBe("duplicate");
+    const second = await asService(
+      pool,
+      (s) =>
+        s.one<{ outcome: string }>(
+          "select outcome from public.confirm_order_payment($1, 'stripe', 'pi_test_again', 20000, 'USD', 0)",
+          [orderId],
+        ),
+      true,
+    );
+    expect(second.outcome).toBe("refund_required");
+    expect(await inventoryOf(variantId)).toEqual({ stock_quantity: 3, reserved_quantity: 0, available_quantity: 3 });
   });
 
-  it("allocates the payment fee across vendor orders so the parts sum exactly", async () => {
+  it("allocates the payment fee across vendor orders when vendors bear fees", async () => {
+    await pool.query("update public.platform_settings set value = '\"vendor\"' where key = 'payments.fee_bearer'");
+    try {
+      await feeSplitScenario();
+    } finally {
+      await pool.query("update public.platform_settings set value = '\"platform\"' where key = 'payments.fee_bearer'");
+    }
+  });
+
+  async function feeSplitScenario() {
     const customer = await createUser(pool);
     const vendors = await Promise.all([newVendor(1000), newVendor(1000), newVendor(1000)]);
     const addressId = await addAddress(customer);
@@ -706,7 +743,7 @@ describe("reservation lifecycle", () => {
       [orderId],
     );
     expect(earnings.rows[0].ok).toBe(true);
-  });
+  }
 });
 
 // ---------------------------------------------------------------------------

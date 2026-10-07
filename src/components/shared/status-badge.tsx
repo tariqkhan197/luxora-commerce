@@ -70,12 +70,14 @@ const VENDOR_ORDER: Record<Enums<"vendor_order_status">, Variant> = {
 };
 const PAYMENT: Record<Enums<"payment_status">, Variant> = {
   pending: "warning",
+  processing: "accent",
   authorized: "accent",
   paid: "success",
   partially_refunded: "outline",
   refunded: "outline",
   failed: "danger",
   cancelled: "neutral",
+  expired: "neutral",
 };
 
 export function OrderStatusBadge({ status }: { status: Enums<"order_status"> }) {

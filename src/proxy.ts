@@ -38,6 +38,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Everything except Next internals, static assets and common files.
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?)$).*)",
+    // Provider webhooks are excluded too: they are verified by signature, carry no session cookies.
+    "/((?!_next/static|_next/image|api/webhooks|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?)$).*)",
   ],
 };

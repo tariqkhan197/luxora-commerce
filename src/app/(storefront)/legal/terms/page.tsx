@@ -77,9 +77,15 @@ export default function TermsPage() {
             error. If you have been charged for a cancelled order, you will be refunded.
           </li>
           <li>
-            Online payment is not yet available on Luxora. Until it is, orders cannot be paid and are not shipped;
-            unpaid orders are cancelled automatically when their reservation expires and nothing is charged.
+            Payment is taken at checkout on a secure page provided by our payment processor, Stripe. Your order is
+            confirmed once the payment succeeds; if you do not complete payment before the payment window closes, the
+            order is cancelled automatically and the items are released.
           </li>
+          <li>
+            While Luxora is being prepared for launch, payments run in Stripe&rsquo;s test environment: no real money is
+            charged and orders placed this way are not fulfilled.
+          </li>
+          <li>Refunds are made to the original payment method.</li>
         </ul>
       </LegalSection>
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   CONTACT_EMAIL,
   GOVERNING_LAW,
+  PAYOUT_HOLD_DAYS_AFTER_DELIVERY,
   LEGAL_COMPANY_NAME,
   RETURN_WINDOW_DAYS,
   STORE_CURRENCY,
@@ -86,8 +87,21 @@ export default function VendorTermsPage() {
             your vendor portal. The rate is fixed on each order when it is placed.
           </li>
           <li>
-            Payouts are not yet available. The payout schedule and method will be set out in these terms before payments
-            are enabled.
+            Customers pay Luxora. You do not need an account with a payment provider. Payment processing fees are
+            currently paid by Luxora and are not deducted from your earnings.
+          </li>
+          <li>
+            Your earnings for an order become available for payout {PAYOUT_HOLD_DAYS_AFTER_DELIVERY} days after it is
+            delivered. Luxora pays available earnings to you directly and records each payout in your vendor portal,
+            where you can follow your balance and statement.
+          </li>
+          <li>
+            Refunds and chargebacks are currently borne by Luxora. Luxora may change this policy for future orders by
+            publishing a new version of these terms.
+          </li>
+          <li>
+            Payments currently run in a test environment while Luxora prepares for launch; balances shown before launch
+            are not real money.
           </li>
         </ul>
       </LegalSection>

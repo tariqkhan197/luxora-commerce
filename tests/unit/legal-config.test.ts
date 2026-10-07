@@ -8,6 +8,7 @@ import {
   LEGAL_DETAILS_PENDING,
   LEGAL_LAST_UPDATED,
   REGISTERED_BUSINESS_ADDRESS,
+  PAYOUT_HOLD_DAYS_AFTER_DELIVERY,
   RETURN_SHIPPING_PAID_BY,
   RETURN_WINDOW_DAYS,
   VENDOR_TERMS_VERSION,
@@ -34,6 +35,9 @@ describe("legal configuration", () => {
     expect(RETURN_WINDOW_DAYS).toBe(14);
     expect(RETURN_SHIPPING_PAID_BY).toBe("customer");
     expect(DUTIES_AND_TAXES_NOTICE).toBe("Duties and taxes may apply on delivery.");
+    // Phase 4b: vendor earnings become payable 14 days after delivery
+    // (mirrors the platform setting payouts.hold_days_after_delivery).
+    expect(PAYOUT_HOLD_DAYS_AFTER_DELIVERY).toBe(14);
   });
 
   it("uses a terms version the database accepts and a valid date", () => {

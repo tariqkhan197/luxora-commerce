@@ -7,6 +7,7 @@ import {
   createApprovedVendor,
   createPool,
   createUser,
+  expectSqlError,
   SQLSTATE,
   type Session,
   type TestUser,
@@ -203,23 +204,28 @@ describe("multi-vendor order model", () => {
     });
   });
 
-  it("gives admins full visibility and lets them record refunds", async () => {
-    await asUser(pool, admin, async (s) => {
+  it("gives admins full visibility but money tables are written only by functions", async () => {
+    const payment = await asUser(pool, admin, async (s) => {
       expect(await s.rows("select id from public.vendor_orders where order_id = $1", [orderId])).toHaveLength(2);
-      const payment = await s.one<{ id: string }>("select id from public.payments where order_id = $1", [orderId]);
-      const refund = await s.one<{ status: string }>(
-        `insert into public.refunds (order_id, vendor_order_id, payment_id, currency, amount_minor, commission_reversed_minor, vendor_debit_minor, reason, requested_by)
-         values ($1, $2, $3, 'USD', 12000, 1800, 10200, 'Damaged on arrival', public.current_profile_id()) returning status`,
-        [orderId, vendorOrderA, payment.id],
-      );
-      expect(refund.status).toBe("requested");
-      await s.fails(
-        SQLSTATE.checkViolation,
-        `insert into public.refunds (order_id, vendor_order_id, payment_id, currency, amount_minor, commission_reversed_minor, vendor_debit_minor, reason)
-           values ($1, $2, $3, 'USD', 100, 90, 20, 'Split exceeds amount')`,
-        [orderId, vendorOrderA, payment.id],
-      );
+      return s.one<{ id: string }>("select id from public.payments where order_id = $1", [orderId]);
     });
+    // Phase 4b: refunds go through request_refund() and the payment provider.
+    await asUser(pool, admin, (s) =>
+      s.denied(
+        `insert into public.refunds (order_id, vendor_order_id, payment_id, currency, amount_minor, reason)
+         values ($1, $2, $3, 'USD', 12000, 'Damaged on arrival')`,
+        [orderId, vendorOrderA, payment.id],
+      ),
+    );
+    // The split invariant still holds at the table level.
+    await expectSqlError(
+      pool.query(
+        `insert into public.refunds (order_id, vendor_order_id, payment_id, currency, amount_minor, commission_reversed_minor, vendor_debit_minor, reason)
+         values ($1, $2, $3, 'USD', 100, 90, 20, 'Split exceeds amount')`,
+        [orderId, vendorOrderA, payment.id],
+      ),
+      SQLSTATE.checkViolation,
+    );
   });
 
   it("lets a customer request a return on their own item only", async () => {

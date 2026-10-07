@@ -65,6 +65,11 @@ export default function PrivacyPage() {
             parts of your order placed with other vendors, or your payment details.
           </li>
           <li>
+            <strong className="text-ink">Our payment processor, Stripe,</strong> receives your payment details, your
+            email address and the order&rsquo;s shipping address to take the payment and prevent fraud. Luxora does not
+            receive or store your full card number; we keep the payment reference, amount and status.
+          </li>
+          <li>
             <strong className="text-ink">Service providers</strong> that host our database, authentication and file
             storage process data on our behalf.
           </li>

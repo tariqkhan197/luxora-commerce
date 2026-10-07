@@ -167,6 +167,23 @@ Legal copy lives in `src/app/(storefront)/legal/*` and reads its company details
 `src/config/legal.ts`. Company details are explicit placeholders until supplied; the pages show a draft notice
 while any remain. Tax is zero in 4a and every total carries "Duties and taxes may apply on delivery."
 
+## Phase 4b: payments (Stripe test mode)
+
+```
+place_order() ─► begin_payment_attempt() ─► Stripe Checkout Session (from order rows) ─► record_checkout_session()
+Stripe ─ signed webhook ─► processStripeWebhook(): verify ─► refuse live mode ─► begin_webhook_event (dedupe)
+                                     └► handleStripeEvent() ─► confirm / expire / fail / refund / dispute (SQL, idempotent)
+/checkout/success ─► reconcileCheckoutSession(): re-read session server-side ─► same handler
+Admin refund ─► request_refund() (policy) ─► Stripe refund (idempotency key = refund id) ─► mark_refund_submitted()
+```
+
+- `src/lib/payments/`: config validation (live keys blocked), the pure Checkout Session builder and the Stripe
+  client, which is server-only and pinned to `STRIPE_API_VERSION`.
+- `src/features/payments/`: event handling over injected ports (`PaymentStore` for the SQL functions,
+  `PaymentGateway` for Stripe), so the logic is unit-tested without Stripe or a database. `server.ts` holds the real
+  adapters, using the service role and the Stripe client.
+- With `PAYMENT_PROVIDER` unset, every page falls back to the Phase 3 behaviour ("awaiting payment").
+
 ## Conventions
 
 - Routes come from `src/config/routes.ts`; never hard-code paths.

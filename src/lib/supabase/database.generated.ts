@@ -401,6 +401,7 @@ export type Database = {
           parent_id: string | null;
           position: number;
           slug: string;
+          tax_code: string | null;
           updated_at: string;
         };
         Insert: {
@@ -414,6 +415,7 @@ export type Database = {
           parent_id?: string | null;
           position?: number;
           slug: string;
+          tax_code?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -427,6 +429,7 @@ export type Database = {
           parent_id?: string | null;
           position?: number;
           slug?: string;
+          tax_code?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -1384,6 +1387,7 @@ export type Database = {
           refunded_quantity: number;
           returned_quantity: number;
           sku: string;
+          tax_code: string | null;
           tax_minor: number;
           total_minor: number;
           unit_price_minor: number;
@@ -1408,6 +1412,7 @@ export type Database = {
           refunded_quantity?: number;
           returned_quantity?: number;
           sku: string;
+          tax_code?: string | null;
           tax_minor?: number;
           total_minor: number;
           unit_price_minor: number;
@@ -1432,6 +1437,7 @@ export type Database = {
           refunded_quantity?: number;
           returned_quantity?: number;
           sku?: string;
+          tax_code?: string | null;
           tax_minor?: number;
           total_minor?: number;
           unit_price_minor?: number;
@@ -1518,6 +1524,7 @@ export type Database = {
           shipping_minor: number;
           status: Database["public"]["Enums"]["order_status"];
           subtotal_minor: number;
+          tax_calculation_ref: string | null;
           tax_minor: number;
           total_minor: number;
           updated_at: string;
@@ -1546,6 +1553,7 @@ export type Database = {
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["order_status"];
           subtotal_minor?: number;
+          tax_calculation_ref?: string | null;
           tax_minor?: number;
           total_minor?: number;
           updated_at?: string;
@@ -1574,6 +1582,7 @@ export type Database = {
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["order_status"];
           subtotal_minor?: number;
+          tax_calculation_ref?: string | null;
           tax_minor?: number;
           total_minor?: number;
           updated_at?: string;
@@ -1584,6 +1593,160 @@ export type Database = {
             columns: ["customer_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payment_attempts: {
+        Row: {
+          amount_minor: number;
+          attempt_no: number;
+          checkout_url: string | null;
+          completed_at: string | null;
+          created_at: string;
+          currency: string;
+          expires_at: string;
+          id: string;
+          livemode: boolean;
+          order_id: string;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          provider_payment_intent_id: string | null;
+          provider_session_id: string;
+          status: Database["public"]["Enums"]["payment_attempt_status"];
+          updated_at: string;
+        };
+        Insert: {
+          amount_minor: number;
+          attempt_no: number;
+          checkout_url?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          currency: string;
+          expires_at: string;
+          id?: string;
+          livemode?: boolean;
+          order_id: string;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          provider_payment_intent_id?: string | null;
+          provider_session_id: string;
+          status?: Database["public"]["Enums"]["payment_attempt_status"];
+          updated_at?: string;
+        };
+        Update: {
+          amount_minor?: number;
+          attempt_no?: number;
+          checkout_url?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          currency?: string;
+          expires_at?: string;
+          id?: string;
+          livemode?: boolean;
+          order_id?: string;
+          provider?: Database["public"]["Enums"]["payment_provider"];
+          provider_payment_intent_id?: string | null;
+          provider_session_id?: string;
+          status?: Database["public"]["Enums"]["payment_attempt_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payment_customers: {
+        Row: {
+          created_at: string;
+          livemode: boolean;
+          profile_id: string;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          provider_customer_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          livemode?: boolean;
+          profile_id: string;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          provider_customer_id: string;
+        };
+        Update: {
+          created_at?: string;
+          livemode?: boolean;
+          profile_id?: string;
+          provider?: Database["public"]["Enums"]["payment_provider"];
+          provider_customer_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_customers_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payment_disputes: {
+        Row: {
+          amount_minor: number;
+          closed_at: string | null;
+          currency: string;
+          fee_minor: number;
+          id: string;
+          opened_at: string;
+          order_id: string;
+          payment_id: string;
+          provider_dispute_id: string;
+          reason: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          amount_minor: number;
+          closed_at?: string | null;
+          currency: string;
+          fee_minor?: number;
+          id?: string;
+          opened_at?: string;
+          order_id: string;
+          payment_id: string;
+          provider_dispute_id: string;
+          reason?: string | null;
+          status: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_minor?: number;
+          closed_at?: string | null;
+          currency?: string;
+          fee_minor?: number;
+          id?: string;
+          opened_at?: string;
+          order_id?: string;
+          payment_id?: string;
+          provider_dispute_id?: string;
+          reason?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_disputes_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_disputes_payment_id_fkey";
+            columns: ["payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
             referencedColumns: ["id"];
           },
         ];
@@ -1631,6 +1794,51 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      payment_webhook_events: {
+        Row: {
+          api_version: string | null;
+          attempts: number;
+          event_id: string;
+          last_attempt_at: string;
+          last_error: string | null;
+          livemode: boolean;
+          payload: NonNullable<Json>;
+          processed_at: string | null;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          received_at: string;
+          status: Database["public"]["Enums"]["webhook_event_status"];
+          type: string;
+        };
+        Insert: {
+          api_version?: string | null;
+          attempts?: number;
+          event_id: string;
+          last_attempt_at?: string;
+          last_error?: string | null;
+          livemode?: boolean;
+          payload: NonNullable<Json>;
+          processed_at?: string | null;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          received_at?: string;
+          status?: Database["public"]["Enums"]["webhook_event_status"];
+          type: string;
+        };
+        Update: {
+          api_version?: string | null;
+          attempts?: number;
+          event_id?: string;
+          last_attempt_at?: string;
+          last_error?: string | null;
+          livemode?: boolean;
+          payload?: NonNullable<Json>;
+          processed_at?: string | null;
+          provider?: Database["public"]["Enums"]["payment_provider"];
+          received_at?: string;
+          status?: Database["public"]["Enums"]["webhook_event_status"];
+          type?: string;
+        };
+        Relationships: [];
       };
       payments: {
         Row: {
@@ -1839,6 +2047,87 @@ export type Database = {
           },
         ];
       };
+      platform_ledger_entries: {
+        Row: {
+          amount_minor: number;
+          created_at: string;
+          created_by: string | null;
+          currency: string;
+          description: string | null;
+          entry_type: Database["public"]["Enums"]["platform_ledger_entry_type"];
+          id: number;
+          order_id: string | null;
+          payment_id: string | null;
+          reference: string | null;
+          refund_id: string | null;
+          vendor_order_id: string | null;
+        };
+        Insert: {
+          amount_minor: number;
+          created_at?: string;
+          created_by?: string | null;
+          currency: string;
+          description?: string | null;
+          entry_type: Database["public"]["Enums"]["platform_ledger_entry_type"];
+          id?: never;
+          order_id?: string | null;
+          payment_id?: string | null;
+          reference?: string | null;
+          refund_id?: string | null;
+          vendor_order_id?: string | null;
+        };
+        Update: {
+          amount_minor?: number;
+          created_at?: string;
+          created_by?: string | null;
+          currency?: string;
+          description?: string | null;
+          entry_type?: Database["public"]["Enums"]["platform_ledger_entry_type"];
+          id?: never;
+          order_id?: string | null;
+          payment_id?: string | null;
+          reference?: string | null;
+          refund_id?: string | null;
+          vendor_order_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_ledger_entries_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_ledger_entries_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_ledger_entries_payment_id_fkey";
+            columns: ["payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_ledger_entries_refund_id_fkey";
+            columns: ["refund_id"];
+            isOneToOne: false;
+            referencedRelation: "refunds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_ledger_entries_vendor_order_id_fkey";
+            columns: ["vendor_order_id"];
+            isOneToOne: false;
+            referencedRelation: "vendor_orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       platform_settings: {
         Row: {
           created_at: string;
@@ -2027,6 +2316,7 @@ export type Database = {
           slug: string;
           status: Database["public"]["Enums"]["product_status"];
           tags: string[];
+          tax_code: string | null;
           updated_at: string;
           vendor_id: string;
           weight_grams: number | null;
@@ -2052,6 +2342,7 @@ export type Database = {
           slug: string;
           status?: Database["public"]["Enums"]["product_status"];
           tags?: string[];
+          tax_code?: string | null;
           updated_at?: string;
           vendor_id: string;
           weight_grams?: number | null;
@@ -2077,6 +2368,7 @@ export type Database = {
           slug?: string;
           status?: Database["public"]["Enums"]["product_status"];
           tags?: string[];
+          tax_code?: string | null;
           updated_at?: string;
           vendor_id?: string;
           weight_grams?: number | null;
@@ -2156,6 +2448,51 @@ export type Database = {
           },
         ];
       };
+      refund_items: {
+        Row: {
+          amount_minor: number;
+          commission_minor: number;
+          created_at: string;
+          id: string;
+          order_item_id: string;
+          quantity: number;
+          refund_id: string;
+        };
+        Insert: {
+          amount_minor: number;
+          commission_minor?: number;
+          created_at?: string;
+          id?: string;
+          order_item_id: string;
+          quantity: number;
+          refund_id: string;
+        };
+        Update: {
+          amount_minor?: number;
+          commission_minor?: number;
+          created_at?: string;
+          id?: string;
+          order_item_id?: string;
+          quantity?: number;
+          refund_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "refund_items_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: false;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "refund_items_refund_id_fkey";
+            columns: ["refund_id"];
+            isOneToOne: false;
+            referencedRelation: "refunds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       refunds: {
         Row: {
           amount_minor: number;
@@ -2166,13 +2503,16 @@ export type Database = {
           currency: string;
           failure_message: string | null;
           id: string;
+          kind: Database["public"]["Enums"]["refund_kind"];
           order_id: string;
           payment_id: string;
           processed_at: string | null;
           provider_refund_id: string | null;
+          provider_status: string | null;
           reason: string;
           requested_by: string | null;
           return_id: string | null;
+          shipping_minor: number;
           status: Database["public"]["Enums"]["refund_status"];
           updated_at: string;
           vendor_debit_minor: number;
@@ -2187,13 +2527,16 @@ export type Database = {
           currency: string;
           failure_message?: string | null;
           id?: string;
+          kind?: Database["public"]["Enums"]["refund_kind"];
           order_id: string;
           payment_id: string;
           processed_at?: string | null;
           provider_refund_id?: string | null;
+          provider_status?: string | null;
           reason: string;
           requested_by?: string | null;
           return_id?: string | null;
+          shipping_minor?: number;
           status?: Database["public"]["Enums"]["refund_status"];
           updated_at?: string;
           vendor_debit_minor?: number;
@@ -2208,13 +2551,16 @@ export type Database = {
           currency?: string;
           failure_message?: string | null;
           id?: string;
+          kind?: Database["public"]["Enums"]["refund_kind"];
           order_id?: string;
           payment_id?: string;
           processed_at?: string | null;
           provider_refund_id?: string | null;
+          provider_status?: string | null;
           reason?: string;
           requested_by?: string | null;
           return_id?: string | null;
+          shipping_minor?: number;
           status?: Database["public"]["Enums"]["refund_status"];
           updated_at?: string;
           vendor_debit_minor?: number;
@@ -2774,6 +3120,84 @@ export type Database = {
           },
         ];
       };
+      vendor_ledger_entries: {
+        Row: {
+          amount_minor: number;
+          created_at: string;
+          created_by: string | null;
+          currency: string;
+          description: string | null;
+          entry_type: Database["public"]["Enums"]["vendor_ledger_entry_type"];
+          id: number;
+          payout_id: string | null;
+          refund_id: string | null;
+          vendor_id: string;
+          vendor_order_id: string | null;
+        };
+        Insert: {
+          amount_minor: number;
+          created_at?: string;
+          created_by?: string | null;
+          currency: string;
+          description?: string | null;
+          entry_type: Database["public"]["Enums"]["vendor_ledger_entry_type"];
+          id?: never;
+          payout_id?: string | null;
+          refund_id?: string | null;
+          vendor_id: string;
+          vendor_order_id?: string | null;
+        };
+        Update: {
+          amount_minor?: number;
+          created_at?: string;
+          created_by?: string | null;
+          currency?: string;
+          description?: string | null;
+          entry_type?: Database["public"]["Enums"]["vendor_ledger_entry_type"];
+          id?: never;
+          payout_id?: string | null;
+          refund_id?: string | null;
+          vendor_id?: string;
+          vendor_order_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vendor_ledger_entries_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_ledger_entries_payout_id_fkey";
+            columns: ["payout_id"];
+            isOneToOne: false;
+            referencedRelation: "payouts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_ledger_entries_refund_id_fkey";
+            columns: ["refund_id"];
+            isOneToOne: false;
+            referencedRelation: "refunds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_ledger_entries_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_ledger_entries_vendor_order_id_fkey";
+            columns: ["vendor_order_id"];
+            isOneToOne: false;
+            referencedRelation: "vendor_orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       vendor_orders: {
         Row: {
           cancelled_at: string | null;
@@ -3288,6 +3712,71 @@ export type Database = {
           },
         ];
       };
+      vendor_balances: {
+        Row: {
+          available_minor: number | null;
+          currency: string | null;
+          lifetime_earnings_minor: number | null;
+          paid_out_minor: number | null;
+          pending_minor: number | null;
+          vendor_id: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vendor_ledger_entries_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      vendor_ledger_view: {
+        Row: {
+          amount_minor: number | null;
+          available_at: string | null;
+          created_at: string | null;
+          currency: string | null;
+          description: string | null;
+          entry_type: Database["public"]["Enums"]["vendor_ledger_entry_type"] | null;
+          id: number | null;
+          payout_id: string | null;
+          refund_id: string | null;
+          vendor_id: string | null;
+          vendor_order_id: string | null;
+          vendor_order_number: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vendor_ledger_entries_payout_id_fkey";
+            columns: ["payout_id"];
+            isOneToOne: false;
+            referencedRelation: "payouts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_ledger_entries_refund_id_fkey";
+            columns: ["refund_id"];
+            isOneToOne: false;
+            referencedRelation: "refunds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_ledger_entries_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_ledger_entries_vendor_order_id_fkey";
+            columns: ["vendor_order_id"];
+            isOneToOne: false;
+            referencedRelation: "vendor_orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
       add_to_cart: { Args: { p_quantity?: number; p_variant_id: string }; Returns: number };
@@ -3321,6 +3810,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      adjust_vendor_balance: {
+        Args: { p_amount_minor: number; p_reason: string; p_vendor_id: string };
+        Returns: undefined;
+      };
       admin_save_shipping_zone: {
         Args: {
           p_countries: string[];
@@ -3332,13 +3825,52 @@ export type Database = {
         };
         Returns: string;
       };
+      allocate_payment_fee_internal: { Args: { p_fee_minor: number; p_order_id: string }; Returns: undefined };
+      apply_provider_refund: {
+        Args: {
+          p_amount_minor: number;
+          p_currency: string;
+          p_failure_reason?: string;
+          p_provider_payment_id: string;
+          p_provider_refund_id: string;
+          p_refund_id: string;
+          p_status: string;
+        };
+        Returns: string;
+      };
       approve_vendor_application: {
         Args: { p_application_id: string; p_commission_rate_bps?: number; p_slug: string };
         Returns: string;
       };
+      assert_payment_mode: { Args: { p_livemode: boolean }; Returns: undefined };
+      assert_platform_caller: { Args: Record<PropertyKey, never>; Returns: undefined };
       assert_variant_purchasable: {
         Args: { p_currency: string; p_quantity: number; p_variant_id: string };
         Returns: number;
+      };
+      begin_payment_attempt: {
+        Args: { p_order_id: string };
+        Returns: {
+          action: string;
+          amount_minor: number;
+          attempt_no: number;
+          checkout_url: string;
+          currency: string;
+          customer_email: string;
+          order_number: string;
+          session_expires_at: string;
+        }[];
+      };
+      begin_webhook_event: {
+        Args: {
+          p_api_version: string;
+          p_event_id: string;
+          p_livemode: boolean;
+          p_payload: Json;
+          p_provider: Database["public"]["Enums"]["payment_provider"];
+          p_type: string;
+        };
+        Returns: string;
       };
       calculate_commission_minor: { Args: { p_base_minor: number; p_rate_bps: number }; Returns: number };
       cancel_pending_order: { Args: { p_order_id: string }; Returns: undefined };
@@ -3395,6 +3927,7 @@ export type Database = {
         }[];
       };
       clear_cart: { Args: Record<PropertyKey, never>; Returns: undefined };
+      close_payment_attempt: { Args: { p_session_id: string }; Returns: undefined };
       commit_reserved_inventory: {
         Args: { p_quantity: number; p_reference_id: string; p_variant_id: string };
         Returns: {
@@ -3417,17 +3950,24 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      complete_refund_internal: { Args: { p_refund_id: string }; Returns: string };
       confirm_order_payment: {
         Args: {
           p_amount_minor: number;
           p_currency: string;
           p_fee_minor?: number;
+          p_livemode?: boolean;
           p_order_id: string;
           p_provider: Database["public"]["Enums"]["payment_provider"];
           p_provider_payment_id: string;
           p_raw_payload?: Json;
+          p_session_id?: string;
+          p_tax_minor?: number;
         };
-        Returns: string;
+        Returns: {
+          outcome: string;
+          payment_id: string;
+        }[];
       };
       current_account_status: {
         Args: Record<PropertyKey, never>;
@@ -3436,7 +3976,14 @@ export type Database = {
       current_profile_id: { Args: Record<PropertyKey, never>; Returns: string };
       current_user_role: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_role"] };
       current_vendor_ids: { Args: Record<PropertyKey, never>; Returns: string[] };
+      expire_payment_attempt: { Args: { p_session_id: string }; Returns: string };
       expire_stale_checkouts: { Args: { p_variant_ids?: string[] }; Returns: number };
+      fail_payment_attempt: { Args: { p_reason: string; p_session_id: string }; Returns: string };
+      fail_refund: { Args: { p_message: string; p_refund_id: string }; Returns: undefined };
+      finish_webhook_event: {
+        Args: { p_error?: string; p_event_id: string; p_status: Database["public"]["Enums"]["webhook_event_status"] };
+        Returns: undefined;
+      };
       flash_sale_is_live: { Args: { p_flash_sale_id: string }; Returns: boolean };
       flash_sale_vendor_id: { Args: { p_flash_sale_id: string }; Returns: string };
       generate_order_number: { Args: Record<PropertyKey, never>; Returns: string };
@@ -3527,6 +4074,14 @@ export type Database = {
         Returns: number;
       };
       loyalty_account_profile_id: { Args: { p_account_id: string }; Returns: string };
+      mark_payment_processing: {
+        Args: { p_livemode: boolean; p_payment_intent_id: string; p_session_id: string };
+        Returns: string;
+      };
+      mark_refund_submitted: {
+        Args: { p_provider_refund_id: string; p_provider_status: string; p_refund_id: string };
+        Returns: string;
+      };
       moderate_product: {
         Args: { p_approve: boolean; p_product_id: string; p_reason?: string };
         Returns: {
@@ -3550,6 +4105,7 @@ export type Database = {
           slug: string;
           status: Database["public"]["Enums"]["product_status"];
           tags: string[];
+          tax_code: string | null;
           updated_at: string;
           vendor_id: string;
           weight_grams: number | null;
@@ -3562,6 +4118,7 @@ export type Database = {
         };
       };
       order_customer_id: { Args: { p_order_id: string }; Returns: string };
+      payout_hold_days: { Args: Record<PropertyKey, never>; Returns: number };
       payout_vendor_id: { Args: { p_payout_id: string }; Returns: string };
       place_order: {
         Args: {
@@ -3573,12 +4130,53 @@ export type Database = {
         };
         Returns: string;
       };
+      platform_setting_int: { Args: { p_default: number; p_key: string }; Returns: number };
+      platform_setting_text: { Args: { p_default: string; p_key: string }; Returns: string };
       product_is_public: { Args: { p_product_id: string }; Returns: boolean };
       product_search_text: {
         Args: { p_description: string; p_name: string; p_short_description: string; p_tags: string[] };
         Returns: string;
       };
       product_vendor_id: { Args: { p_product_id: string }; Returns: string };
+      record_checkout_session: {
+        Args: {
+          p_amount_minor: number;
+          p_attempt_no: number;
+          p_checkout_url: string;
+          p_currency: string;
+          p_expires_at: string;
+          p_livemode: boolean;
+          p_order_id: string;
+          p_provider: Database["public"]["Enums"]["payment_provider"];
+          p_session_id: string;
+        };
+        Returns: string;
+      };
+      record_dispute: {
+        Args: {
+          p_amount_minor: number;
+          p_currency: string;
+          p_fee_minor: number;
+          p_provider_dispute_id: string;
+          p_provider_payment_id: string;
+          p_reason: string;
+          p_status: string;
+        };
+        Returns: string;
+      };
+      record_late_payment_refund: { Args: { p_payment_id: string; p_provider_refund_id: string }; Returns: string };
+      record_payment_fee: {
+        Args: {
+          p_fee_minor: number;
+          p_provider: Database["public"]["Enums"]["payment_provider"];
+          p_provider_payment_id: string;
+        };
+        Returns: string;
+      };
+      record_vendor_payout: {
+        Args: { p_amount_minor: number; p_method: string; p_notes?: string; p_reference: string; p_vendor_id: string };
+        Returns: string;
+      };
       reject_vendor_application: { Args: { p_application_id: string; p_reason: string }; Returns: undefined };
       release_inventory: {
         Args: { p_quantity: number; p_variant_id: string };
@@ -3602,8 +4200,27 @@ export type Database = {
           isSetofReturn: false;
         };
       };
-      release_order_reservations_internal: { Args: { p_order_id: string; p_reason: string }; Returns: undefined };
+      release_order_reservations_internal: {
+        Args: { p_order_id: string; p_payment_status: Database["public"]["Enums"]["payment_status"]; p_reason: string };
+        Returns: undefined;
+      };
       remove_cart_item: { Args: { p_cart_item_id: string }; Returns: undefined };
+      request_refund: {
+        Args: {
+          p_include_shipping?: boolean;
+          p_items: Json;
+          p_kind: Database["public"]["Enums"]["refund_kind"];
+          p_reason: string;
+          p_vendor_order_id: string;
+        };
+        Returns: {
+          amount_minor: number;
+          currency: string;
+          order_id: string;
+          provider_payment_id: string;
+          refund_id: string;
+        }[];
+      };
       require_active_customer: { Args: Record<PropertyKey, never>; Returns: string };
       reserve_inventory: {
         Args: { p_quantity: number; p_variant_id: string };
@@ -3628,6 +4245,14 @@ export type Database = {
         };
       };
       resolve_commission_rate_bps: { Args: { p_category_id?: string; p_vendor_id: string }; Returns: number };
+      restore_cart_from_order: {
+        Args: { p_order_id: string };
+        Returns: {
+          restored: number;
+          skipped: number;
+        }[];
+      };
+      reverse_vendor_payout: { Args: { p_payout_id: string; p_reason: string }; Returns: undefined };
       review_customer_id: { Args: { p_review_id: string }; Returns: string };
       review_is_public: { Args: { p_review_id: string }; Returns: boolean };
       set_cart_item_quantity: { Args: { p_cart_item_id: string; p_quantity: number }; Returns: number };
@@ -3684,6 +4309,7 @@ export type Database = {
           slug: string;
           status: Database["public"]["Enums"]["product_status"];
           tags: string[];
+          tax_code: string | null;
           updated_at: string;
           vendor_id: string;
           weight_grams: number | null;
@@ -3722,14 +4348,34 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "refunded";
+      payment_attempt_status: "open" | "complete" | "expired" | "failed" | "cancelled";
       payment_provider: "stripe" | "paypal" | "cash_on_delivery" | "manual";
-      payment_status: "pending" | "authorized" | "paid" | "partially_refunded" | "refunded" | "failed" | "cancelled";
+      payment_status:
+        | "pending"
+        | "processing"
+        | "authorized"
+        | "paid"
+        | "partially_refunded"
+        | "refunded"
+        | "failed"
+        | "cancelled"
+        | "expired";
       payment_transaction_status: "pending" | "succeeded" | "failed";
       payment_transaction_type: "authorization" | "capture" | "refund" | "fee" | "adjustment";
       payout_item_type: "vendor_order_earnings" | "refund_debit" | "adjustment";
       payout_status: "pending" | "scheduled" | "processing" | "paid" | "failed" | "cancelled";
       placement_status: "scheduled" | "active" | "ended" | "cancelled";
+      platform_ledger_entry_type:
+        | "commission_earned"
+        | "commission_reversed"
+        | "processing_fee"
+        | "refund_loss"
+        | "dispute_loss"
+        | "dispute_fee"
+        | "dispute_recovered"
+        | "adjustment";
       product_status: "draft" | "pending_review" | "active" | "rejected" | "archived";
+      refund_kind: "cancellation" | "return" | "goodwill" | "late_payment" | "external";
       refund_status: "requested" | "approved" | "rejected" | "processing" | "completed" | "failed";
       return_status:
         "requested" | "approved" | "rejected" | "in_transit" | "received" | "inspected" | "completed" | "cancelled";
@@ -3738,10 +4384,13 @@ export type Database = {
       subscription_status: "trialing" | "active" | "past_due" | "cancelled" | "expired";
       user_role: "customer" | "vendor" | "admin" | "super_admin";
       vendor_application_status: "submitted" | "under_review" | "approved" | "rejected";
+      vendor_ledger_entry_type:
+        "order_earning" | "fee_adjustment" | "refund_debit" | "adjustment" | "payout" | "payout_reversal";
       vendor_member_role: "owner" | "manager" | "staff";
       vendor_order_status:
         "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "completed" | "cancelled" | "refunded";
       vendor_status: "pending" | "approved" | "suspended" | "rejected" | "closed";
+      webhook_event_status: "received" | "processed" | "failed" | "ignored";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -3879,14 +4528,36 @@ export const Constants = {
         "cancelled",
         "refunded",
       ],
+      payment_attempt_status: ["open", "complete", "expired", "failed", "cancelled"],
       payment_provider: ["stripe", "paypal", "cash_on_delivery", "manual"],
-      payment_status: ["pending", "authorized", "paid", "partially_refunded", "refunded", "failed", "cancelled"],
+      payment_status: [
+        "pending",
+        "processing",
+        "authorized",
+        "paid",
+        "partially_refunded",
+        "refunded",
+        "failed",
+        "cancelled",
+        "expired",
+      ],
       payment_transaction_status: ["pending", "succeeded", "failed"],
       payment_transaction_type: ["authorization", "capture", "refund", "fee", "adjustment"],
       payout_item_type: ["vendor_order_earnings", "refund_debit", "adjustment"],
       payout_status: ["pending", "scheduled", "processing", "paid", "failed", "cancelled"],
       placement_status: ["scheduled", "active", "ended", "cancelled"],
+      platform_ledger_entry_type: [
+        "commission_earned",
+        "commission_reversed",
+        "processing_fee",
+        "refund_loss",
+        "dispute_loss",
+        "dispute_fee",
+        "dispute_recovered",
+        "adjustment",
+      ],
       product_status: ["draft", "pending_review", "active", "rejected", "archived"],
+      refund_kind: ["cancellation", "return", "goodwill", "late_payment", "external"],
       refund_status: ["requested", "approved", "rejected", "processing", "completed", "failed"],
       return_status: [
         "requested",
@@ -3903,6 +4574,14 @@ export const Constants = {
       subscription_status: ["trialing", "active", "past_due", "cancelled", "expired"],
       user_role: ["customer", "vendor", "admin", "super_admin"],
       vendor_application_status: ["submitted", "under_review", "approved", "rejected"],
+      vendor_ledger_entry_type: [
+        "order_earning",
+        "fee_adjustment",
+        "refund_debit",
+        "adjustment",
+        "payout",
+        "payout_reversal",
+      ],
       vendor_member_role: ["owner", "manager", "staff"],
       vendor_order_status: [
         "pending",
@@ -3915,6 +4594,7 @@ export const Constants = {
         "refunded",
       ],
       vendor_status: ["pending", "approved", "suspended", "rejected", "closed"],
+      webhook_event_status: ["received", "processed", "failed", "ignored"],
     },
   },
 } as const;

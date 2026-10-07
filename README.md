@@ -5,9 +5,10 @@ independent vendors in a single checkout; each vendor fulfils and is paid for it
 platform earns commissions, subscriptions and paid placements.
 
 This repository has completed **Phase 1 — Foundation**, **Phase 2 — Vendor onboarding & catalog**,
-**Phase 3 — Cart, checkout & orders** and **Release 4a — taxonomy, shipping and legal**. Customers can build a
-multi-vendor bag, manage addresses and place an order that is split into one vendor order per brand with stock
-reserved and per-vendor shipping charged. **Online payment is not enabled yet:**
+**Phase 3 — Cart, checkout & orders**, **Release 4a — taxonomy, shipping and legal** and **Phase 4b — payments
+(Stripe test mode)**. Customers can build a multi-vendor bag and pay for it on Stripe hosted Checkout; the order
+is split into one vendor order per brand, and Luxora owes each vendor through an internal ledger. **Live payments
+are blocked** until Stripe, business and legal approval are confirmed (see `docs/PAYMENTS.md`). **Online payment is not enabled yet:**
 orders are created as _awaiting payment_, nothing is charged, and unpaid reservations expire automatically.
 Payouts, refunds and promotions arrive in later phases; their routes exist and are protected, but deliberately
 render a "scheduled" notice instead of mock data.
@@ -182,10 +183,10 @@ and the database (RLS policies + triggers). Only the database layer is authorita
 
 ## Status
 
-Phases 1–3 and Release 4a are complete and verified (`npm run check`). The application is **not
-production-ready** yet: no payment provider is integrated, so orders cannot be paid; tax is not calculated
-(checkout states "Duties and taxes may apply on delivery."); and the company details on the legal pages are
-placeholders (see below).
+Phases 1–3, Release 4a and Phase 4b are complete and verified (`npm run check`). The application is **not
+production-ready**: payments run in Stripe **test mode only** (live keys and live events are refused); tax is not
+collected (checkout states "Duties and taxes may apply on delivery."); and the company details on the legal pages
+are placeholders (see below).
 
 ### Phase 2 workflows
 
@@ -256,3 +257,21 @@ placeholders (see below).
 shows a "Draft — pending legal review" notice and highlights the missing values. Replace them with the real
 details (and have the documents reviewed) before launch; `tests/unit/legal-config.test.ts` must be updated in the
 same change. Bump `VENDOR_TERMS_VERSION` whenever the Vendor Terms change materially.
+
+### Phase 4b workflows (Stripe test mode)
+
+Full runbook: [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
+
+- **Pay.** Placing an order redirects to Stripe hosted Checkout (card, Link, Apple Pay and Google Pay; no delayed
+  methods). The session is built from the order rows and must equal the order total. The stock hold extends to the
+  session expiry.
+- **Confirm.** `POST /api/webhooks/stripe` verifies the signature and de-duplicates the event, then calls
+  `confirm_order_payment()`, which is idempotent per PaymentIntent and the only path that commits stock. The success
+  page applies the same session server-side if the webhook is slow.
+- **Recover.** Pay now / Resume payment, payment-aware cancellation (open sessions are expired first), automatic
+  expiry and "Restore these items to my bag". Late payments are refunded automatically.
+- **Refund.** From the admin order page, per vendor order and quantity. Shipping follows a configurable policy.
+  Refunds, chargebacks and processing fees are currently borne by Luxora and recorded in `platform_ledger_entries`.
+- **Pay vendors.** `vendor_ledger_entries` holds what Luxora owes each vendor. Earnings become available 14 days
+  after delivery, and admins record payouts made outside Stripe (`/admin/payouts`). Vendors see their balance and
+  statement at `/vendor/payouts`. No vendor needs a Stripe account, and no bank details are stored.

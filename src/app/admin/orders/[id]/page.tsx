@@ -11,6 +11,10 @@ import { addressLines, asAddress } from "@/features/addresses/format";
 import { cancelOrder } from "@/features/checkout/actions";
 import { OrderLineItems } from "@/features/orders/components/order-line-items";
 import { getOrderDetail } from "@/features/orders/queries";
+import { OrderFinancePanel } from "@/features/payments/components/order-finance-panel";
+import { RefundDialog } from "@/features/payments/components/refund-dialog";
+import { getOrderFinance } from "@/features/payments/queries";
+import { paymentsOn } from "@/lib/payments/status";
 import { requireRole } from "@/lib/auth/dal";
 import { formatBasisPoints, formatMoney } from "@/lib/money";
 import { uuidSchema } from "@/lib/validation";
@@ -22,8 +26,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps<"/admin
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) notFound();
   await requireRole(["admin", "super_admin"], ROUTES.admin.order(id));
-  const order = await getOrderDetail(id);
+  const [order, finance] = await Promise.all([getOrderDetail(id), getOrderFinance(id)]);
   if (!order) notFound();
+  const payments = paymentsOn();
+  const refundable = payments && ["paid", "partially_refunded"].includes(order.payment_status);
   const { currency } = order;
   const vendorOrders = [...order.vendor_orders].sort((a, b) =>
     a.vendor_order_number.localeCompare(b.vendor_order_number),
@@ -53,7 +59,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps<"/admin
               {order.reservation_expires_at
                 ? ` until ${formatDateTimeUtc(new Date(order.reservation_expires_at))}`
                 : ""}
-              . No payment provider is enabled, so this order cannot be paid yet.
+              .{" "}
+              {payments
+                ? "The customer can pay on Stripe's hosted checkout (test mode); cancelling closes any open payment page first."
+                : "No payment provider is enabled, so this order cannot be paid yet."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -79,7 +88,24 @@ export default async function AdminOrderDetailPage({ params }: PageProps<"/admin
                     <p className="eyebrow">{vendorOrder.vendor_order_number}</p>
                     <CardTitle className="mt-1">{vendorOrder.vendors?.display_name ?? "Vendor"}</CardTitle>
                   </div>
-                  <VendorOrderStatusBadge status={vendorOrder.status} />
+                  <div className="flex items-center gap-2">
+                    {refundable ? (
+                      <RefundDialog
+                        vendorOrderId={vendorOrder.id}
+                        vendorOrderNumber={vendorOrder.vendor_order_number}
+                        currency={currency}
+                        shippingMinor={vendorOrder.shipping_minor}
+                        items={vendorOrder.order_items.map((item) => ({
+                          id: item.id,
+                          productName: item.product_name,
+                          variantTitle: item.variant_title,
+                          unitPriceMinor: item.unit_price_minor,
+                          refundable: item.quantity - item.refunded_quantity,
+                        }))}
+                      />
+                    ) : null}
+                    <VendorOrderStatusBadge status={vendorOrder.status} />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -99,6 +125,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps<"/admin
           ))}
         </div>
         <aside className="flex flex-col gap-6">
+          <OrderFinancePanel finance={finance} currency={currency} />
           <Card>
             <CardHeader>
               <CardTitle>Totals</CardTitle>

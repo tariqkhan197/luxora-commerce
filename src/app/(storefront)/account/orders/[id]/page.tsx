@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
-import { ActionButton } from "@/components/shared/action-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { OrderStatusBadge, PaymentStatusBadge, VendorOrderStatusBadge } from "@/components/shared/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,19 +9,20 @@ import { DUTIES_AND_TAXES_NOTICE } from "@/config/legal";
 import { ROUTES } from "@/config/routes";
 import { AddressBlock } from "@/features/addresses/components/address-card";
 import { addressLines, asAddress } from "@/features/addresses/format";
-import { cancelOrder } from "@/features/checkout/actions";
 import { OrderLineItems } from "@/features/orders/components/order-line-items";
-import { PaymentNotice } from "@/features/orders/components/payment-notice";
+import { OrderPaymentPanel } from "@/features/orders/components/order-payment-panel";
 import { getOrderDetail } from "@/features/orders/queries";
 import { requireUser } from "@/lib/auth/dal";
 import { formatMoney } from "@/lib/money";
+import { paymentsOn } from "@/lib/payments/status";
 import { uuidSchema } from "@/lib/validation";
 import { formatDateTimeUtc } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Order details" };
 
 const CANCELLATION_COPY: Record<string, string> = {
-  checkout_expired: "The reservation expired before payment, so the items were released.",
+  checkout_expired: "The payment window closed before payment, so the items were released.",
+  payment_failed: "The payment failed, so the items were released.",
   cancelled_by_customer: "You cancelled this order.",
   cancelled_by_admin: "This order was cancelled by Luxora.",
 };
@@ -36,23 +35,12 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
   // RLS already hides other customers' orders; the explicit check also keeps admins on their own account view.
   if (!order || order.customer_id !== profile.id) notFound();
 
-  const awaitingPayment = order.status === "pending" && order.payment_status === "pending";
   const vendorOrders = [...order.vendor_orders].sort((a, b) =>
     a.vendor_order_number.localeCompare(b.vendor_order_number),
   );
 
   return (
     <div className="flex flex-col gap-8">
-      {query.placed === "1" && awaitingPayment ? (
-        <Alert variant="success">
-          <CheckCircle2 />
-          <AlertTitle>Order placed</AlertTitle>
-          <AlertDescription>
-            Your items are reserved. A confirmation is shown below; nothing has been charged.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       <PageHeader
         eyebrow={`Placed ${formatDateTimeUtc(new Date(order.placed_at))}`}
         title={order.order_number}
@@ -64,19 +52,12 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         }
       />
 
-      {awaitingPayment ? (
-        <div className="flex flex-col gap-3">
-          <PaymentNotice reservationExpiresAt={order.reservation_expires_at} />
-          <ActionButton
-            variant="outline"
-            size="sm"
-            confirmMessage="Cancel this order and release the items?"
-            action={cancelOrder.bind(null, order.id)}
-          >
-            Cancel order
-          </ActionButton>
-        </div>
-      ) : null}
+      <OrderPaymentPanel
+        order={order}
+        returnState={typeof query.payment === "string" ? query.payment : null}
+        placed={query.placed === "1"}
+        paymentsOn={paymentsOn()}
+      />
       {order.status === "cancelled" ? (
         <Alert>
           <AlertTitle>Order cancelled</AlertTitle>

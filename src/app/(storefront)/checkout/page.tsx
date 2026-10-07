@@ -12,6 +12,7 @@ import { CheckoutForm } from "@/features/checkout/components/checkout-form";
 import { getShippingQuotes, MAX_QUOTED_ADDRESSES } from "@/features/checkout/queries";
 import { buildCheckoutQuote, type CheckoutQuote } from "@/features/checkout/quote";
 import { requireUser } from "@/lib/auth/dal";
+import { paymentsOn } from "@/lib/payments/status";
 import { formatMoney } from "@/lib/money";
 import { STORAGE_BUCKETS } from "@/lib/storage";
 
@@ -53,6 +54,7 @@ export default async function CheckoutPage() {
         baseQuote={quote}
         quotesByAddress={quotesByAddress}
         defaultCountry={addresses[0]?.country_code ?? "US"}
+        paymentsEnabled={paymentsOn()}
         items={
           <div className="flex flex-col gap-5 border-t border-line pt-5">
             {quote.groups.map((group) => (

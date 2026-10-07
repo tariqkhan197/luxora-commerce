@@ -13,6 +13,7 @@ export const ROUTES = {
   collection: (slug: string) => `/collection/${slug}`,
   cart: "/cart",
   checkout: "/checkout",
+  checkoutSuccess: "/checkout/success",
   wishlist: "/wishlist",
   compare: "/compare",
   account: {

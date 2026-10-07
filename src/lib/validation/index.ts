@@ -4,3 +4,4 @@ export * from "./vendor";
 export * from "./catalog";
 export * from "./checkout";
 export * from "./shipping";
+export * from "./payments";

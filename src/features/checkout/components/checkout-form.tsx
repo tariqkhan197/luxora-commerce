@@ -39,6 +39,8 @@ interface CheckoutFormProps {
   /** Server-rendered list of the bag's items, shown inside the summary. */
   items: ReactNode;
   defaultCountry: string;
+  /** Online payment (Stripe hosted checkout, test mode) is enabled. */
+  paymentsEnabled: boolean;
 }
 
 function AddressRadio({
@@ -101,6 +103,7 @@ export function CheckoutForm({
   quotesByAddress,
   items,
   defaultCountry,
+  paymentsEnabled,
 }: CheckoutFormProps) {
   const [pending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -257,10 +260,13 @@ export function CheckoutForm({
             disabled={!canPlace}
             className="w-full sm:w-auto sm:self-end"
           >
-            Place order · {formatMoney(summaryQuote.total.amountMinor, summaryQuote.currency)}
+            {paymentsEnabled ? "Continue to payment" : "Place order"} ·{" "}
+            {formatMoney(summaryQuote.total.amountMinor, summaryQuote.currency)}
           </Button>
           <p className="text-xs leading-relaxed text-ink-faint sm:text-right">
-            Placing the order reserves your items. No payment is taken at this step.
+            {paymentsEnabled
+              ? "Your items are reserved while you pay on Stripe's secure checkout page (test mode: no real money is taken)."
+              : "Placing the order reserves your items. No payment is taken at this step."}
           </p>
         </div>
       </form>

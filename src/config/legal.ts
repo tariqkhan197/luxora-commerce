@@ -38,7 +38,7 @@ export const LEGAL_DETAILS_PENDING = [
 ].some(isPlaceholder);
 
 // -----------------------------------------------------------------------------
-// Policy decisions (confirmed for Release 4a)
+// Policy decisions (confirmed for Release 4a and Phase 4b)
 // -----------------------------------------------------------------------------
 
 /** Days after delivery within which a customer may request a return. */
@@ -49,6 +49,12 @@ export const RETURN_SHIPPING_PAID_BY = "customer" as const;
 
 /** Shown wherever totals are displayed until tax calculation ships (Release 4b). */
 export const DUTIES_AND_TAXES_NOTICE = "Duties and taxes may apply on delivery.";
+
+/**
+ * Days after delivery before vendor earnings can be paid out. Mirrors the
+ * platform setting `payouts.hold_days_after_delivery` used by the ledger.
+ */
+export const PAYOUT_HOLD_DAYS_AFTER_DELIVERY = 14;
 
 /** Currency all prices are shown and charged in. */
 export const STORE_CURRENCY = "USD";
@@ -62,7 +68,7 @@ export const STORE_CURRENCY = "USD";
  * application with the acceptance timestamp. Bump it whenever the Vendor Terms
  * change materially. Format must match the database check: [A-Za-z0-9._-]{1,40}.
  */
-export const VENDOR_TERMS_VERSION = "2026-10-07-draft";
+export const VENDOR_TERMS_VERSION = "2026-10-08-draft";
 
 /** Date shown as "Last updated" on the legal pages (ISO yyyy-mm-dd). */
-export const LEGAL_LAST_UPDATED = "2026-10-07";
+export const LEGAL_LAST_UPDATED = "2026-10-08";
