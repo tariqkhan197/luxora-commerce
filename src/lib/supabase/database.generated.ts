@@ -2228,6 +2228,57 @@ export type Database = {
           },
         ];
       };
+      product_review_stats: {
+        Row: {
+          product_id: string;
+          rating_1: number;
+          rating_2: number;
+          rating_3: number;
+          rating_4: number;
+          rating_5: number;
+          rating_sum: number;
+          review_count: number;
+          updated_at: string;
+        };
+        Insert: {
+          product_id: string;
+          rating_1?: number;
+          rating_2?: number;
+          rating_3?: number;
+          rating_4?: number;
+          rating_5?: number;
+          rating_sum?: number;
+          review_count?: number;
+          updated_at?: string;
+        };
+        Update: {
+          product_id?: string;
+          rating_1?: number;
+          rating_2?: number;
+          rating_3?: number;
+          rating_4?: number;
+          rating_5?: number;
+          rating_sum?: number;
+          review_count?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_review_stats_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: true;
+            referencedRelation: "product_listings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "product_review_stats_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: true;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       product_variants: {
         Row: {
           barcode: string | null;
@@ -2937,6 +2988,7 @@ export type Database = {
       };
       reviews: {
         Row: {
+          author_name: string;
           body: string;
           created_at: string;
           customer_id: string;
@@ -2946,14 +2998,18 @@ export type Database = {
           moderated_by: string | null;
           order_item_id: string | null;
           product_id: string;
+          purchased_variant: string | null;
           rating: number;
+          rejection_reason: string | null;
           status: Database["public"]["Enums"]["review_status"];
           title: string | null;
           updated_at: string;
+          vendor_id: string;
           vendor_replied_at: string | null;
           vendor_reply: string | null;
         };
         Insert: {
+          author_name: string;
           body: string;
           created_at?: string;
           customer_id: string;
@@ -2963,14 +3019,18 @@ export type Database = {
           moderated_by?: string | null;
           order_item_id?: string | null;
           product_id: string;
+          purchased_variant?: string | null;
           rating: number;
+          rejection_reason?: string | null;
           status?: Database["public"]["Enums"]["review_status"];
           title?: string | null;
           updated_at?: string;
+          vendor_id: string;
           vendor_replied_at?: string | null;
           vendor_reply?: string | null;
         };
         Update: {
+          author_name?: string;
           body?: string;
           created_at?: string;
           customer_id?: string;
@@ -2980,10 +3040,13 @@ export type Database = {
           moderated_by?: string | null;
           order_item_id?: string | null;
           product_id?: string;
+          purchased_variant?: string | null;
           rating?: number;
+          rejection_reason?: string | null;
           status?: Database["public"]["Enums"]["review_status"];
           title?: string | null;
           updated_at?: string;
+          vendor_id?: string;
           vendor_replied_at?: string | null;
           vendor_reply?: string | null;
         };
@@ -3021,6 +3084,13 @@ export type Database = {
             columns: ["product_id"];
             isOneToOne: false;
             referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reviews_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
             referencedColumns: ["id"];
           },
         ];
@@ -3838,6 +3908,8 @@ export type Database = {
           primary_image_alt: string | null;
           primary_image_path: string | null;
           published_at: string | null;
+          rating_sum: number | null;
+          review_count: number | null;
           search_vector: unknown;
           short_description: string | null;
           slug: string | null;
@@ -4034,10 +4106,15 @@ export type Database = {
       };
       assert_payment_mode: { Args: { p_livemode: boolean }; Returns: undefined };
       assert_platform_caller: { Args: Record<PropertyKey, never>; Returns: undefined };
+      assert_review_content_internal: {
+        Args: { p_body: string; p_rating: number; p_title: string };
+        Returns: undefined;
+      };
       assert_variant_purchasable: {
         Args: { p_currency: string; p_quantity: number; p_variant_id: string };
         Returns: number;
       };
+      attach_review_image: { Args: { p_review_id: string; p_storage_path: string }; Returns: string };
       begin_payment_attempt: {
         Args: { p_order_id: string };
         Returns: {
@@ -4064,6 +4141,7 @@ export type Database = {
       };
       calculate_commission_minor: { Args: { p_base_minor: number; p_rate_bps: number }; Returns: number };
       can_manage_return: { Args: { p_vendor_id: string }; Returns: boolean };
+      can_reply_to_review: { Args: { p_vendor_id: string }; Returns: boolean };
       cancel_pending_order: { Args: { p_order_id: string }; Returns: undefined };
       cancel_return_request: { Args: { p_return_id: string }; Returns: undefined };
       cart_lines: {
@@ -4169,6 +4247,7 @@ export type Database = {
       current_profile_id: { Args: Record<PropertyKey, never>; Returns: string };
       current_user_role: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_role"] };
       current_vendor_ids: { Args: Record<PropertyKey, never>; Returns: string[] };
+      delete_review: { Args: { p_review_id: string }; Returns: string[] };
       expire_payment_attempt: { Args: { p_session_id: string }; Returns: string };
       expire_stale_checkouts: { Args: { p_variant_ids?: string[] }; Returns: number };
       fail_payment_attempt: { Args: { p_reason: string; p_session_id: string }; Returns: string };
@@ -4315,6 +4394,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      moderate_review: { Args: { p_approve: boolean; p_reason?: string; p_review_id: string }; Returns: undefined };
       order_customer_id: { Args: { p_order_id: string }; Returns: string };
       payout_hold_days: { Args: Record<PropertyKey, never>; Returns: number };
       payout_vendor_id: { Args: { p_payout_id: string }; Returns: string };
@@ -4375,6 +4455,7 @@ export type Database = {
         Args: { p_amount_minor: number; p_method: string; p_notes?: string; p_reference: string; p_vendor_id: string };
         Returns: string;
       };
+      refresh_product_review_stats_internal: { Args: { p_product_id: string }; Returns: undefined };
       reject_return_request: { Args: { p_reason: string; p_return_id: string }; Returns: undefined };
       reject_vendor_application: { Args: { p_application_id: string; p_reason: string }; Returns: undefined };
       release_inventory: {
@@ -4404,6 +4485,9 @@ export type Database = {
         Returns: undefined;
       };
       remove_cart_item: { Args: { p_cart_item_id: string }; Returns: undefined };
+      remove_review_image: { Args: { p_image_id: string }; Returns: string };
+      remove_review_reply: { Args: { p_review_id: string }; Returns: undefined };
+      reply_to_review: { Args: { p_reply: string; p_review_id: string }; Returns: undefined };
       request_refund: {
         Args: {
           p_include_shipping?: boolean;
@@ -4475,8 +4559,25 @@ export type Database = {
       return_window_days: { Args: Record<PropertyKey, never>; Returns: number };
       returnable_quantity_internal: { Args: { p_exclude_request?: string; p_order_item_id: string }; Returns: number };
       reverse_vendor_payout: { Args: { p_payout_id: string; p_reason: string }; Returns: undefined };
+      review_author_name: { Args: { p_profile_id: string }; Returns: string };
       review_customer_id: { Args: { p_review_id: string }; Returns: string };
+      review_eligibility: {
+        Args: { p_product_id?: string };
+        Returns: {
+          delivered_at: string;
+          image_path: string;
+          order_id: string;
+          order_item_id: string;
+          product_id: string;
+          product_name: string;
+          variant_title: string;
+          window_ends_at: string;
+        }[];
+      };
+      review_image_is_public: { Args: { p_storage_path: string }; Returns: boolean };
       review_is_public: { Args: { p_review_id: string }; Returns: boolean };
+      review_max_images: { Args: Record<PropertyKey, never>; Returns: number };
+      review_window_days: { Args: Record<PropertyKey, never>; Returns: number };
       set_cart_item_quantity: { Args: { p_cart_item_id: string; p_quantity: number }; Returns: number };
       set_category_active: { Args: { p_active: boolean; p_category_id: string }; Returns: number };
       set_vendor_status: {
@@ -4508,6 +4609,11 @@ export type Database = {
       };
       shipping_zone_for_country: { Args: { p_country: string }; Returns: string };
       storage_owner_segment: { Args: { p_name: string }; Returns: string };
+      storage_segment_uuid: { Args: { p_index: number; p_name: string }; Returns: string };
+      submit_review: {
+        Args: { p_body: string; p_order_item_id: string; p_rating: number; p_title: string };
+        Returns: string;
+      };
       unpublish_product: {
         Args: { p_product_id: string };
         Returns: {
@@ -4542,6 +4648,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      update_review: {
+        Args: { p_body: string; p_rating: number; p_review_id: string; p_title: string };
+        Returns: undefined;
       };
       vendor_order_vendor_id: { Args: { p_vendor_order_id: string }; Returns: string };
       wishlist_is_public: { Args: { p_wishlist_id: string }; Returns: boolean };

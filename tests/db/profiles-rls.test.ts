@@ -91,8 +91,14 @@ describe("profiles", () => {
     const rows = await asAnon(pool, (s) =>
       s.rows<{ key: string }>("select key from public.platform_settings order by key"),
     );
-    // returns.window_days (Phase 5) is customer-facing policy, so it is public.
-    expect(rows.map((r) => r.key)).toEqual(["platform.default_currency", "platform.name", "returns.window_days"]);
+    // The returns (Phase 5) and reviews (Phase 6A) limits are customer-facing policy, so they are public.
+    expect(rows.map((r) => r.key)).toEqual([
+      "platform.default_currency",
+      "platform.name",
+      "returns.window_days",
+      "reviews.max_images",
+      "reviews.window_days",
+    ]);
   });
 
   it("lets only super admins change platform settings", async () => {
