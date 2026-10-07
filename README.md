@@ -178,7 +178,8 @@ and the database (RLS policies + triggers). Only the database layer is authorita
 | 3 ✅  | Cart (database-priced), addresses, multi-vendor checkout with stock reservation and expiry, customer/vendor/admin order views, payment-provider boundary (no provider enabled yet)                |
 | 4a ✅ | Admin category and brand management, shipping zones and vendor shipping rates in checkout, tax disclosure (tax = 0), legal pages and consent recording                                            |
 | 4b    | Stripe payments (Luxora as merchant of record), Stripe Tax, vendor payouts                                                                                                                        |
-| 4     | Commissions ledger, refunds & returns workflows, coupons, flash sales, subscriptions                                                                                                              |
+| 5 ✅  | Customer returns (RMA): request within 14 days of delivery, vendor approval with return instructions, return tracking, receipt with restock, admin refund through Stripe (test mode)              |
+| 6     | Reviews, coupons, flash sales, subscriptions                                                                                                                                                      |
 | 5     | Analytics, content management, loyalty, notifications, featured placements                                                                                                                        |
 
 ## Status
@@ -275,3 +276,18 @@ Full runbook: [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
 - **Pay vendors.** `vendor_ledger_entries` holds what Luxora owes each vendor. Earnings become available 14 days
   after delivery, and admins record payouts made outside Stripe (`/admin/payouts`). Vendors see their balance and
   statement at `/vendor/payouts`. No vendor needs a Stripe account, and no bank details are stored.
+
+### Phase 5 workflows (returns)
+
+- **Request.** On a delivered shipment, the customer picks items, quantities and a reason for each, inside the
+  return window (`returns.window_days`, 14 days from delivery). Returnable quantities exclude units in other open
+  returns and units refunded outside a return. Requests get an RMA number (`<vendor order>-R<n>`).
+- **Decide.** Vendor owners/managers (or admins) approve a request with the return address and instructions, or
+  decline it with a reason. The customer can cancel until the items are sent, then adds carrier and tracking.
+- **Receive.** The vendor marks the parcel received, optionally restocking the units (an inventory `return`
+  movement).
+- **Refund.** Admins refund received returns from `/admin/returns`. `request_return_refund()` goes through
+  `request_refund()`, so the Phase 4b shipping and liability policies, ledgers and Stripe idempotency all apply,
+  and the refund is linked to the return. If the provider refund fails, the return reopens so it can be retried.
+  Admins can also close a received return without a refund.
+- Pages: `/account/returns`, the order page ("Request a return"), `/vendor/returns`, `/admin/returns`.

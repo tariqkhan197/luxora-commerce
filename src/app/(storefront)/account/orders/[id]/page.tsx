@@ -11,6 +11,9 @@ import { AddressBlock } from "@/features/addresses/components/address-card";
 import { addressLines, asAddress } from "@/features/addresses/format";
 import { OrderLineItems } from "@/features/orders/components/order-line-items";
 import { OrderPaymentPanel } from "@/features/orders/components/order-payment-panel";
+import { ReturnCard } from "@/features/returns/components/return-card";
+import { ReturnRequestDialog } from "@/features/returns/components/return-request-dialog";
+import { getReturnEligibility, listReturns } from "@/features/returns/queries";
 import { getOrderDetail } from "@/features/orders/queries";
 import { requireUser } from "@/lib/auth/dal";
 import { formatMoney } from "@/lib/money";
@@ -34,6 +37,10 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
   const order = await getOrderDetail(id);
   // RLS already hides other customers' orders; the explicit check also keeps admins on their own account view.
   if (!order || order.customer_id !== profile.id) notFound();
+  const [eligibility, returns] = await Promise.all([
+    getReturnEligibility(order.id),
+    listReturns({ orderId: order.id }),
+  ]);
 
   const vendorOrders = [...order.vendor_orders].sort((a, b) =>
     a.vendor_order_number.localeCompare(b.vendor_order_number),
@@ -77,7 +84,10 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                     <p className="eyebrow">Shipment {vendorOrder.vendor_order_number}</p>
                     <CardTitle className="mt-1">{vendorOrder.vendors?.display_name ?? "Vendor"}</CardTitle>
                   </div>
-                  <VendorOrderStatusBadge status={vendorOrder.status} />
+                  <div className="flex items-center gap-2">
+                    <ReturnButton vendorOrder={vendorOrder} eligibility={eligibility} />
+                    <VendorOrderStatusBadge status={vendorOrder.status} />
+                  </div>
                 </div>
                 {vendorOrder.tracking_number ? (
                   <p className="text-sm text-ink-soft">
@@ -106,6 +116,14 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
               </CardContent>
             </Card>
           ))}
+          {returns.length ? (
+            <section className="flex flex-col gap-4">
+              <h2 className="display-3">Returns</h2>
+              {returns.map((ret) => (
+                <ReturnCard key={ret.id} ret={ret} viewer="customer" />
+              ))}
+            </section>
+          ) : null}
         </div>
 
         <aside className="flex flex-col gap-6">
@@ -159,5 +177,43 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
         </aside>
       </div>
     </div>
+  );
+}
+
+type Eligibility = Awaited<ReturnType<typeof getReturnEligibility>>;
+
+/** "Request a return" for a delivered shipment with returnable items, inside the window. */
+function ReturnButton({
+  vendorOrder,
+  eligibility,
+}: {
+  vendorOrder: {
+    id: string;
+    vendors: { display_name: string } | null;
+    order_items: { id: string; product_name: string; variant_title: string }[];
+  };
+  eligibility: Eligibility;
+}) {
+  const rows = eligibility.filter((row) => row.vendor_order_id === vendorOrder.id && row.eligible);
+  if (rows.length === 0) return null;
+  const windowEnds = rows[0].window_ends_at;
+  const items = vendorOrder.order_items
+    .map((item) => ({ item, row: rows.find((row) => row.order_item_id === item.id) }))
+    .filter((entry): entry is { item: (typeof vendorOrder.order_items)[number]; row: Eligibility[number] } =>
+      Boolean(entry.row),
+    )
+    .map(({ item, row }) => ({
+      id: item.id,
+      productName: item.product_name,
+      variantTitle: item.variant_title,
+      returnable: row.returnable_quantity,
+    }));
+  return (
+    <ReturnRequestDialog
+      vendorOrderId={vendorOrder.id}
+      vendorName={vendorOrder.vendors?.display_name ?? "the brand"}
+      windowEndsLabel={windowEnds ? formatDateTimeUtc(new Date(windowEnds)) : "the end of the return window"}
+      items={items}
+    />
   );
 }

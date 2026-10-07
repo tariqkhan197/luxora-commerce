@@ -89,3 +89,23 @@ export function VendorOrderStatusBadge({ status }: { status: Enums<"vendor_order
 export function PaymentStatusBadge({ status }: { status: Enums<"payment_status"> }) {
   return <Badge variant={PAYMENT[status]}>{status === "pending" ? "unpaid" : label(status)}</Badge>;
 }
+
+const RETURN: Record<Enums<"return_status">, Variant> = {
+  requested: "warning",
+  approved: "accent",
+  rejected: "danger",
+  in_transit: "accent",
+  received: "accent",
+  inspected: "accent",
+  completed: "success",
+  cancelled: "neutral",
+};
+const RETURN_LABEL: Partial<Record<Enums<"return_status">, string>> = {
+  approved: "approved",
+  in_transit: "on its way back",
+  completed: "refund issued",
+};
+
+export function ReturnStatusBadge({ status }: { status: Enums<"return_status"> }) {
+  return <Badge variant={RETURN[status]}>{RETURN_LABEL[status] ?? label(status)}</Badge>;
+}

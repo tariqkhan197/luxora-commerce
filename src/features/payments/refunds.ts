@@ -29,6 +29,21 @@ export async function issueRefund(values: RefundRequestValues): Promise<{ refund
   const request = data?.[0];
   if (!request) throw AppError.notFound("Vendor order not found.");
 
+  return submitRefundToProvider(request, { vendor_order_id: values.vendorOrderId });
+}
+
+interface RequestedRefund {
+  refund_id: string;
+  amount_minor: number;
+  provider_payment_id: string;
+  order_id: string;
+}
+
+/** Steps 2–3 above for a refund the database has already accepted. */
+async function submitRefundToProvider(
+  request: RequestedRefund,
+  metadata: Record<string, string>,
+): Promise<{ refundId: string; status: string }> {
   const admin = createAdminClient();
   let providerRefund: { id: string; status: string | null };
   try {
@@ -36,7 +51,7 @@ export async function issueRefund(values: RefundRequestValues): Promise<{ refund
       {
         payment_intent: request.provider_payment_id,
         amount: request.amount_minor,
-        metadata: { refund_id: request.refund_id, order_id: request.order_id, vendor_order_id: values.vendorOrderId },
+        metadata: { refund_id: request.refund_id, order_id: request.order_id, ...metadata },
       },
       { idempotencyKey: `luxora-refund:${request.refund_id}` },
     );
@@ -54,4 +69,24 @@ export async function issueRefund(values: RefundRequestValues): Promise<{ refund
   });
   if (submitError) throw fromPostgrestError(submitError);
   return { refundId: request.refund_id, status: status ?? "submitted" };
+}
+
+/**
+ * Refunds a received return (admin). request_return_refund() builds the refund
+ * from the returned items with the "return" shipping policy, links it to the
+ * return and marks the return completed; a provider failure reopens it.
+ */
+export async function issueReturnRefund(
+  returnId: string,
+  shipping: RefundRequestValues["shipping"],
+): Promise<{ refundId: string; status: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("request_return_refund", {
+    p_return_id: returnId,
+    p_include_shipping: shippingChoiceToFlag(shipping) ?? undefined,
+  });
+  if (error) throw fromPostgrestError(error);
+  const request = data?.[0];
+  if (!request) throw AppError.notFound("Return not found.");
+  return submitRefundToProvider(request, { return_request_id: returnId });
 }

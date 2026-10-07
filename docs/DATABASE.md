@@ -40,6 +40,7 @@ PostgreSQL (Supabase). Migrations in `supabase/migrations/`, applied in filename
 | `20261008000018_stripe_payments`             | `payment_attempts`, `payment_customers`, `payment_webhook_events`, attempt/session functions, idempotent `confirm_order_payment` v2, payment-aware expiry and cancellation, restore cart, currency and 100-line guards |
 | `20261008000019_refunds_ledgers`             | `refund_items`, `vendor_ledger_entries`, `platform_ledger_entries`, `payment_disputes`, refund/dispute/payout functions, `vendor_balances`, finance tables read-only for API roles                                     |
 | `20261008000020_tax_readiness`               | Tax codes on products, categories and order items (snapshot), `orders.tax_calculation_ref`; tax collection stays disabled                                                                                              |
+| `20261009000021_returns_rma`                 | `return_requests` + `return_request_items` (RMA per vendor order), customer/vendor/admin return functions, return refunds through `request_refund`, legacy `returns` table made read-only                              |
 
 ## Entity relationships
 
@@ -249,6 +250,26 @@ See `docs/PAYMENTS.md` for the flow, the policy settings and the activation chec
   - `vendor_balances` gives pending, available, paid-out and lifetime totals per vendor.
 - **Finance tables are function-only.** `refunds`, `payouts`, `payout_items` and `commissions` are read-only for
   API roles, including admins.
+
+## Returns (Phase 5)
+
+`return_requests` (one per vendor-order parcel) and `return_request_items` are read-only for API roles. Every
+transition is an audited security-definer function:
+
+| Function                                           | Caller                      | Effect                                                                                    |
+| -------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------- |
+| `return_eligibility(order)`                        | customer                    | Returnable quantity, window end and eligibility per item of their order                   |
+| `create_return_request(vendor_order, items, note)` | customer                    | Paid, delivered, inside `returns.window_days`; quantities ≤ returnable; reason per item   |
+| `cancel_return_request(id)`                        | customer                    | `requested`/`approved` → `cancelled`                                                      |
+| `mark_return_shipped(id, carrier, tracking, url)`  | customer                    | `approved` → `in_transit`                                                                 |
+| `approve_return_request(id, instructions)`         | vendor owner/manager, admin | `requested` → `approved` with the return address                                          |
+| `reject_return_request(id, reason)`                | vendor owner/manager, admin | `requested` → `rejected`; after receipt admins only (close without refund)                |
+| `mark_return_received(id, restock, notes)`         | vendor owner/manager, admin | `approved`/`in_transit` → `received`; optional restock via `adjust_inventory('return')`   |
+| `request_return_refund(id, include_shipping)`      | admin                       | `received` → `completed`; calls `request_refund(..., 'return', ...)` and links the refund |
+
+Returnable quantity = bought − units in active returns − units refunded outside returns. A provider refund
+failure on a return's refund reopens the return (`received`) so it can be refunded again. The Phase 1 per-item
+`returns` table, whose policies allowed direct customer inserts and unrestricted vendor updates, is now read-only.
 
 ## Audit log
 

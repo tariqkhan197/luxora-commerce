@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const ITEMS = [
   { label: "Overview", href: ROUTES.account.root, exact: true },
   { label: "Orders", href: ROUTES.account.orders },
+  { label: "Returns", href: ROUTES.account.returns },
   { label: "Addresses", href: ROUTES.account.addresses },
   { label: "Reviews", href: ROUTES.account.reviews },
   { label: "Rewards", href: ROUTES.account.rewards },

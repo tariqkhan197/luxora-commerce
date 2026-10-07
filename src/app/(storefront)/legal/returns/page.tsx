@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CONTACT_EMAIL, RETURN_WINDOW_DAYS } from "@/config/legal";
 import { ROUTES } from "@/config/routes";
 import { LegalDocument, LegalSection, LegalValue } from "@/features/legal/components/legal-document";
@@ -23,11 +24,19 @@ export default function ReturnsPolicyPage() {
       </LegalSection>
 
       <LegalSection title="How to start a return">
-        <p>
-          Contact us at <LegalValue value={CONTACT_EMAIL} /> with your order number and the items you would like to
-          return. We will confirm the return with the vendor and send you the return address. Please do not send items
-          back before your return is confirmed.
-        </p>
+        <ul>
+          <li>
+            Open the order in <Link href={ROUTES.account.orders}>your account</Link> and choose{" "}
+            <em>Request a return</em> on the shipment, with the items, quantities and a reason for each.
+          </li>
+          <li>
+            The vendor reviews the request. Once it is approved, the return address and instructions appear on your
+            order and on <Link href={ROUTES.account.returns}>your returns page</Link>. Please do not send items back
+            before your return is approved.
+          </li>
+          <li>When you have sent the parcel, add the carrier and tracking number to the return.</li>
+          <li>You can cancel a return request until you have sent the items.</li>
+        </ul>
       </LegalSection>
 
       <LegalSection title="Return shipping">
@@ -39,8 +48,8 @@ export default function ReturnsPolicyPage() {
 
       <LegalSection title="Refunds">
         <p>
-          Once the vendor has received the returned items, the refund for them is issued to your original payment
-          method.
+          Once the vendor has received the returned items, Luxora issues the refund for them to your original payment
+          method. The original shipping charge is not refunded for returns.
         </p>
       </LegalSection>
 
