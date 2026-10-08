@@ -350,6 +350,7 @@ export type Database = {
       };
       carts: {
         Row: {
+          coupon_id: string | null;
           created_at: string;
           currency: string;
           expires_at: string | null;
@@ -360,6 +361,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          coupon_id?: string | null;
           created_at?: string;
           currency?: string;
           expires_at?: string | null;
@@ -370,6 +372,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          coupon_id?: string | null;
           created_at?: string;
           currency?: string;
           expires_at?: string | null;
@@ -380,6 +383,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "carts_coupon_id_fkey";
+            columns: ["coupon_id"];
+            isOneToOne: false;
+            referencedRelation: "coupons";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "carts_profile_id_fkey";
             columns: ["profile_id"];
@@ -730,6 +740,35 @@ export type Database = {
           },
         ];
       };
+      coupon_code_attempts: {
+        Row: {
+          attempted_at: string;
+          id: number;
+          profile_id: string;
+          succeeded: boolean;
+        };
+        Insert: {
+          attempted_at?: string;
+          id?: never;
+          profile_id: string;
+          succeeded: boolean;
+        };
+        Update: {
+          attempted_at?: string;
+          id?: never;
+          profile_id?: string;
+          succeeded?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "coupon_code_attempts_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       coupon_usages: {
         Row: {
           coupon_id: string;
@@ -738,6 +777,9 @@ export type Database = {
           discount_minor: number;
           id: string;
           order_id: string;
+          redeemed_at: string | null;
+          released_at: string | null;
+          status: Database["public"]["Enums"]["coupon_usage_status"];
         };
         Insert: {
           coupon_id: string;
@@ -746,6 +788,9 @@ export type Database = {
           discount_minor: number;
           id?: string;
           order_id: string;
+          redeemed_at?: string | null;
+          released_at?: string | null;
+          status?: Database["public"]["Enums"]["coupon_usage_status"];
         };
         Update: {
           coupon_id?: string;
@@ -754,6 +799,9 @@ export type Database = {
           discount_minor?: number;
           id?: string;
           order_id?: string;
+          redeemed_at?: string | null;
+          released_at?: string | null;
+          status?: Database["public"]["Enums"]["coupon_usage_status"];
         };
         Relationships: [
           {
@@ -785,9 +833,13 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           description: string | null;
+          disabled_by: string | null;
+          disabled_by_admin_at: string | null;
+          disabled_reason: string | null;
           discount_type: Database["public"]["Enums"]["discount_type"];
           discount_value: number;
           ends_at: string | null;
+          funded_by: string | null;
           id: string;
           is_active: boolean;
           max_discount_minor: number | null;
@@ -806,9 +858,13 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
+          disabled_by?: string | null;
+          disabled_by_admin_at?: string | null;
+          disabled_reason?: string | null;
           discount_type: Database["public"]["Enums"]["discount_type"];
           discount_value: number;
           ends_at?: string | null;
+          funded_by?: never;
           id?: string;
           is_active?: boolean;
           max_discount_minor?: number | null;
@@ -827,9 +883,13 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
+          disabled_by?: string | null;
+          disabled_by_admin_at?: string | null;
+          disabled_reason?: string | null;
           discount_type?: Database["public"]["Enums"]["discount_type"];
           discount_value?: number;
           ends_at?: string | null;
+          funded_by?: never;
           id?: string;
           is_active?: boolean;
           max_discount_minor?: number | null;
@@ -847,6 +907,13 @@ export type Database = {
           {
             foreignKeyName: "coupons_created_by_fkey";
             columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "coupons_disabled_by_fkey";
+            columns: ["disabled_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
@@ -1064,6 +1131,9 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           description: string | null;
+          disabled_by: string | null;
+          disabled_by_admin_at: string | null;
+          disabled_reason: string | null;
           ends_at: string;
           id: string;
           name: string;
@@ -1076,6 +1146,9 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
+          disabled_by?: string | null;
+          disabled_by_admin_at?: string | null;
+          disabled_reason?: string | null;
           ends_at: string;
           id?: string;
           name: string;
@@ -1088,6 +1161,9 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
+          disabled_by?: string | null;
+          disabled_by_admin_at?: string | null;
+          disabled_reason?: string | null;
           ends_at?: string;
           id?: string;
           name?: string;
@@ -1100,6 +1176,13 @@ export type Database = {
           {
             foreignKeyName: "flash_sales_created_by_fkey";
             columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "flash_sales_disabled_by_fkey";
+            columns: ["disabled_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
@@ -1377,10 +1460,13 @@ export type Database = {
           commission_rate_bps: number;
           created_at: string;
           discount_minor: number;
+          flash_sale_item_id: string | null;
           fulfilled_quantity: number;
           id: string;
           image_path: string | null;
+          list_price_minor: number | null;
           order_id: string;
+          platform_discount_minor: number;
           product_id: string | null;
           product_name: string;
           quantity: number;
@@ -1402,10 +1488,13 @@ export type Database = {
           commission_rate_bps?: number;
           created_at?: string;
           discount_minor?: number;
+          flash_sale_item_id?: string | null;
           fulfilled_quantity?: number;
           id?: string;
           image_path?: string | null;
+          list_price_minor?: number | null;
           order_id: string;
+          platform_discount_minor?: number;
           product_id?: string | null;
           product_name: string;
           quantity: number;
@@ -1427,10 +1516,13 @@ export type Database = {
           commission_rate_bps?: number;
           created_at?: string;
           discount_minor?: number;
+          flash_sale_item_id?: string | null;
           fulfilled_quantity?: number;
           id?: string;
           image_path?: string | null;
+          list_price_minor?: number | null;
           order_id?: string;
+          platform_discount_minor?: number;
           product_id?: string | null;
           product_name?: string;
           quantity?: number;
@@ -1448,6 +1540,20 @@ export type Database = {
           vendor_order_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "order_items_flash_sale_item_id_fkey";
+            columns: ["flash_sale_item_id"];
+            isOneToOne: false;
+            referencedRelation: "flash_sale_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_flash_sale_item_id_fkey";
+            columns: ["flash_sale_item_id"];
+            isOneToOne: false;
+            referencedRelation: "live_flash_sale_items";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "order_items_order_id_fkey";
             columns: ["order_id"];
@@ -1508,6 +1614,7 @@ export type Database = {
           completed_at: string | null;
           confirmed_at: string | null;
           coupon_code: string | null;
+          coupon_id: string | null;
           created_at: string;
           currency: string;
           customer_email: string;
@@ -1521,6 +1628,7 @@ export type Database = {
           placed_at: string;
           reservation_expires_at: string | null;
           shipping_address: NonNullable<Json>;
+          shipping_discount_minor: number;
           shipping_minor: number;
           status: Database["public"]["Enums"]["order_status"];
           subtotal_minor: number;
@@ -1537,6 +1645,7 @@ export type Database = {
           completed_at?: string | null;
           confirmed_at?: string | null;
           coupon_code?: string | null;
+          coupon_id?: string | null;
           created_at?: string;
           currency: string;
           customer_email: string;
@@ -1550,6 +1659,7 @@ export type Database = {
           placed_at?: string;
           reservation_expires_at?: string | null;
           shipping_address: NonNullable<Json>;
+          shipping_discount_minor?: number;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["order_status"];
           subtotal_minor?: number;
@@ -1566,6 +1676,7 @@ export type Database = {
           completed_at?: string | null;
           confirmed_at?: string | null;
           coupon_code?: string | null;
+          coupon_id?: string | null;
           created_at?: string;
           currency?: string;
           customer_email?: string;
@@ -1579,6 +1690,7 @@ export type Database = {
           placed_at?: string;
           reservation_expires_at?: string | null;
           shipping_address?: NonNullable<Json>;
+          shipping_discount_minor?: number;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["order_status"];
           subtotal_minor?: number;
@@ -1588,6 +1700,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey";
+            columns: ["coupon_id"];
+            isOneToOne: false;
+            referencedRelation: "coupons";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "orders_customer_id_fkey";
             columns: ["customer_id"];
@@ -2558,12 +2677,14 @@ export type Database = {
           order_id: string;
           payment_id: string;
           processed_at: string | null;
+          promotion_reversed_minor: number;
           provider_refund_id: string | null;
           provider_status: string | null;
           reason: string;
           requested_by: string | null;
           return_id: string | null;
           return_request_id: string | null;
+          shipping_discount_minor: number;
           shipping_minor: number;
           status: Database["public"]["Enums"]["refund_status"];
           updated_at: string;
@@ -2583,12 +2704,14 @@ export type Database = {
           order_id: string;
           payment_id: string;
           processed_at?: string | null;
+          promotion_reversed_minor?: number;
           provider_refund_id?: string | null;
           provider_status?: string | null;
           reason: string;
           requested_by?: string | null;
           return_id?: string | null;
           return_request_id?: string | null;
+          shipping_discount_minor?: number;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["refund_status"];
           updated_at?: string;
@@ -2608,12 +2731,14 @@ export type Database = {
           order_id?: string;
           payment_id?: string;
           processed_at?: string | null;
+          promotion_reversed_minor?: number;
           provider_refund_id?: string | null;
           provider_status?: string | null;
           reason?: string;
           requested_by?: string | null;
           return_id?: string | null;
           return_request_id?: string | null;
+          shipping_discount_minor?: number;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["refund_status"];
           updated_at?: string;
@@ -3471,8 +3596,10 @@ export type Database = {
           id: string;
           order_id: string;
           payment_fee_minor: number;
+          platform_funded_minor: number;
           shipped_at: string | null;
           shipping_address: Json | null;
+          shipping_discount_minor: number;
           shipping_minor: number;
           status: Database["public"]["Enums"]["vendor_order_status"];
           subtotal_minor: number;
@@ -3499,8 +3626,10 @@ export type Database = {
           id?: string;
           order_id: string;
           payment_fee_minor?: number;
+          platform_funded_minor?: number;
           shipped_at?: string | null;
           shipping_address?: Json | null;
+          shipping_discount_minor?: number;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["vendor_order_status"];
           subtotal_minor?: number;
@@ -3527,8 +3656,10 @@ export type Database = {
           id?: string;
           order_id?: string;
           payment_fee_minor?: number;
+          platform_funded_minor?: number;
           shipped_at?: string | null;
           shipping_address?: Json | null;
+          shipping_discount_minor?: number;
           shipping_minor?: number;
           status?: Database["public"]["Enums"]["vendor_order_status"];
           subtotal_minor?: number;
@@ -3889,6 +4020,49 @@ export type Database = {
       };
     };
     Views: {
+      live_flash_sale_items: {
+        Row: {
+          ends_at: string | null;
+          flash_sale_id: string | null;
+          id: string | null;
+          quantity_limit: number | null;
+          remaining: number | null;
+          sale_price_minor: number | null;
+          sold_count: number | null;
+          variant_id: string | null;
+          vendor_id: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "flash_sale_items_flash_sale_id_fkey";
+            columns: ["flash_sale_id"];
+            isOneToOne: false;
+            referencedRelation: "flash_sales";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "flash_sale_items_variant_id_fkey";
+            columns: ["variant_id"];
+            isOneToOne: false;
+            referencedRelation: "product_variant_availability";
+            referencedColumns: ["variant_id"];
+          },
+          {
+            foreignKeyName: "flash_sale_items_variant_id_fkey";
+            columns: ["variant_id"];
+            isOneToOne: false;
+            referencedRelation: "product_variants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "flash_sales_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       product_listings: {
         Row: {
           brand_id: string | null;
@@ -3900,6 +4074,8 @@ export type Database = {
           compare_at_price_minor: number | null;
           created_at: string | null;
           currency: string | null;
+          flash_min_price_minor: number | null;
+          flash_sale_ends_at: string | null;
           id: string | null;
           in_stock: boolean | null;
           max_price_minor: number | null;
@@ -3952,6 +4128,9 @@ export type Database = {
           position: number | null;
           price_minor: number | null;
           product_id: string | null;
+          sale_ends_at: string | null;
+          sale_limited: boolean | null;
+          sale_price_minor: number | null;
           sku: string | null;
           title: string | null;
           variant_id: string | null;
@@ -4075,6 +4254,7 @@ export type Database = {
         Args: { p_amount_minor: number; p_reason: string; p_vendor_id: string };
         Returns: undefined;
       };
+      admin_disable_flash_sale: { Args: { p_reason: string; p_sale_id: string }; Returns: undefined };
       admin_save_shipping_zone: {
         Args: {
           p_countries: string[];
@@ -4086,7 +4266,19 @@ export type Database = {
         };
         Returns: string;
       };
+      admin_set_coupon_disabled: {
+        Args: { p_coupon_id: string; p_disabled: boolean; p_reason?: string };
+        Returns: undefined;
+      };
+      allocate_minor_internal: { Args: { p_amount: number; p_weights: number[] }; Returns: number[] };
       allocate_payment_fee_internal: { Args: { p_fee_minor: number; p_order_id: string }; Returns: undefined };
+      apply_cart_coupon: {
+        Args: { p_code: string };
+        Returns: {
+          applied: boolean;
+          message: string;
+        }[];
+      };
       apply_provider_refund: {
         Args: {
           p_amount_minor: number;
@@ -4140,18 +4332,38 @@ export type Database = {
         Returns: string;
       };
       calculate_commission_minor: { Args: { p_base_minor: number; p_rate_bps: number }; Returns: number };
+      can_manage_coupon_internal: {
+        Args: { p_scope: Database["public"]["Enums"]["coupon_scope"]; p_vendor_id: string };
+        Returns: boolean;
+      };
+      can_manage_flash_sale_internal: { Args: { p_vendor_id: string }; Returns: boolean };
       can_manage_return: { Args: { p_vendor_id: string }; Returns: boolean };
       can_reply_to_review: { Args: { p_vendor_id: string }; Returns: boolean };
       cancel_pending_order: { Args: { p_order_id: string }; Returns: undefined };
       cancel_return_request: { Args: { p_return_id: string }; Returns: undefined };
+      cart_coupon_allocation_internal: {
+        Args: { p_country: string; p_coupon_id: string };
+        Returns: {
+          discount_minor: number;
+          line_discounts: Json;
+          message: string;
+          ok: boolean;
+          shipping_discount_minor: number;
+          vendor_shipping_discounts: Json;
+        }[];
+      };
       cart_lines: {
         Args: Record<PropertyKey, never>;
         Returns: {
           added_price_minor: number;
           cart_item_id: string;
           currency: string;
+          flash_sale_ends_at: string;
+          flash_sale_item_id: string;
+          flash_sale_units_left: number;
           image_path: string;
           line_total_minor: number;
+          list_price_minor: number;
           max_quantity: number;
           options: Json;
           product_id: string;
@@ -4170,6 +4382,22 @@ export type Database = {
         }[];
       };
       cart_owner_profile_id: { Args: { p_cart_id: string }; Returns: string };
+      cart_promotion_quote: {
+        Args: { p_address_id?: string };
+        Returns: {
+          applied: boolean;
+          code: string;
+          coupon_id: string;
+          discount_minor: number;
+          discount_type: Database["public"]["Enums"]["discount_type"];
+          funded_by: string;
+          line_discounts: Json;
+          message: string;
+          name: string;
+          shipping_discount_minor: number;
+          vendor_shipping_discounts: Json;
+        }[];
+      };
       cart_shipping_for_country: {
         Args: { p_country: string };
         Returns: {
@@ -4239,6 +4467,7 @@ export type Database = {
           payment_id: string;
         }[];
       };
+      coupon_has_been_used_internal: { Args: { p_coupon_id: string }; Returns: boolean };
       create_return_request: { Args: { p_items: Json; p_note?: string; p_vendor_order_id: string }; Returns: string };
       current_account_status: {
         Args: Record<PropertyKey, never>;
@@ -4248,6 +4477,7 @@ export type Database = {
       current_user_role: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_role"] };
       current_vendor_ids: { Args: Record<PropertyKey, never>; Returns: string[] };
       delete_review: { Args: { p_review_id: string }; Returns: string[] };
+      end_flash_sale: { Args: { p_sale_id: string }; Returns: undefined };
       expire_payment_attempt: { Args: { p_session_id: string }; Returns: string };
       expire_stale_checkouts: { Args: { p_variant_ids?: string[] }; Returns: number };
       fail_payment_attempt: { Args: { p_reason: string; p_session_id: string }; Returns: string };
@@ -4257,7 +4487,12 @@ export type Database = {
         Returns: undefined;
       };
       flash_sale_is_live: { Args: { p_flash_sale_id: string }; Returns: boolean };
+      flash_sale_overlap_internal: {
+        Args: { p_ends: string; p_sale_id: string; p_starts: string; p_variant_id: string };
+        Returns: boolean;
+      };
       flash_sale_vendor_id: { Args: { p_flash_sale_id: string }; Returns: string };
+      format_money_internal: { Args: { p_currency: string; p_minor: number }; Returns: string };
       generate_order_number: { Args: Record<PropertyKey, never>; Returns: string };
       has_vendor_role: {
         Args: { p_roles: Database["public"]["Enums"]["vendor_member_role"][]; p_vendor_id: string };
@@ -4484,6 +4719,7 @@ export type Database = {
         Args: { p_order_id: string; p_payment_status: Database["public"]["Enums"]["payment_status"]; p_reason: string };
         Returns: undefined;
       };
+      remove_cart_coupon: { Args: Record<PropertyKey, never>; Returns: undefined };
       remove_cart_item: { Args: { p_cart_item_id: string }; Returns: undefined };
       remove_review_image: { Args: { p_image_id: string }; Returns: string };
       remove_review_reply: { Args: { p_review_id: string }; Returns: undefined };
@@ -4578,8 +4814,39 @@ export type Database = {
       review_is_public: { Args: { p_review_id: string }; Returns: boolean };
       review_max_images: { Args: Record<PropertyKey, never>; Returns: number };
       review_window_days: { Args: Record<PropertyKey, never>; Returns: number };
+      save_coupon: {
+        Args: {
+          p_code: string;
+          p_coupon_id: string;
+          p_description: string;
+          p_discount_type: Database["public"]["Enums"]["discount_type"];
+          p_discount_value: number;
+          p_ends_at: string;
+          p_max_discount_minor: number;
+          p_min_subtotal_minor: number;
+          p_name: string;
+          p_starts_at: string;
+          p_usage_limit: number;
+          p_usage_limit_per_customer: number;
+          p_vendor_id: string;
+        };
+        Returns: string;
+      };
+      save_flash_sale: {
+        Args: {
+          p_description: string;
+          p_ends_at: string;
+          p_name: string;
+          p_sale_id: string;
+          p_starts_at: string;
+          p_vendor_id: string;
+        };
+        Returns: string;
+      };
       set_cart_item_quantity: { Args: { p_cart_item_id: string; p_quantity: number }; Returns: number };
       set_category_active: { Args: { p_active: boolean; p_category_id: string }; Returns: number };
+      set_coupon_active: { Args: { p_active: boolean; p_coupon_id: string }; Returns: undefined };
+      set_flash_sale_items: { Args: { p_items: Json; p_sale_id: string }; Returns: number };
       set_vendor_status: {
         Args: { p_reason?: string; p_status: Database["public"]["Enums"]["vendor_status"]; p_vendor_id: string };
         Returns: {
@@ -4666,6 +4933,7 @@ export type Database = {
       commission_rule_scope: "global" | "vendor" | "category";
       commission_status: "pending" | "settled" | "reversed";
       coupon_scope: "platform" | "vendor";
+      coupon_usage_status: "reserved" | "redeemed" | "released";
       discount_type: "percentage" | "fixed_amount" | "free_shipping";
       flash_sale_status: "scheduled" | "active" | "ended" | "cancelled";
       inventory_movement_type:
@@ -4705,7 +4973,9 @@ export type Database = {
         | "dispute_loss"
         | "dispute_fee"
         | "dispute_recovered"
-        | "adjustment";
+        | "adjustment"
+        | "promotion_cost"
+        | "promotion_cost_reversed";
       product_status: "draft" | "pending_review" | "active" | "rejected" | "archived";
       refund_kind: "cancellation" | "return" | "goodwill" | "late_payment" | "external";
       refund_status: "requested" | "approved" | "rejected" | "processing" | "completed" | "failed";
@@ -4838,6 +5108,7 @@ export const Constants = {
       commission_rule_scope: ["global", "vendor", "category"],
       commission_status: ["pending", "settled", "reversed"],
       coupon_scope: ["platform", "vendor"],
+      coupon_usage_status: ["reserved", "redeemed", "released"],
       discount_type: ["percentage", "fixed_amount", "free_shipping"],
       flash_sale_status: ["scheduled", "active", "ended", "cancelled"],
       inventory_movement_type: [
@@ -4887,6 +5158,8 @@ export const Constants = {
         "dispute_fee",
         "dispute_recovered",
         "adjustment",
+        "promotion_cost",
+        "promotion_cost_reversed",
       ],
       product_status: ["draft", "pending_review", "active", "rejected", "archived"],
       refund_kind: ["cancellation", "return", "goodwill", "late_payment", "external"],

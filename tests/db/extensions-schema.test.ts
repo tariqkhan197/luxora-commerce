@@ -76,14 +76,25 @@ describe("case-insensitive behaviour is preserved", () => {
   });
 
   it("treats coupon codes as unique case-insensitively", async () => {
+    // Phase 6B: coupons are written through save_coupon() only.
+    const create = (code: string) =>
+      asUser(
+        pool,
+        admin,
+        (s) =>
+          s.query(
+            "select public.save_coupon(null, null, $1, 'Welcome', null, 'percentage', 1000, 0, null, null, null, null, null)",
+            [code],
+          ),
+        true,
+      );
+    await create("WELCOME10");
     await asUser(pool, admin, async (s) => {
-      await s.query(
-        "insert into public.coupons (code, scope, name, discount_type, discount_value) values ('WELCOME10', 'platform', 'Welcome', 'percentage', 1000)",
+      const error = await s.fails(
+        SQLSTATE.raiseException,
+        "select public.save_coupon(null, null, 'welcome10', 'Duplicate', null, 'percentage', 1000, 0, null, null, null, null, null)",
       );
-      await s.fails(
-        SQLSTATE.uniqueViolation,
-        "insert into public.coupons (code, scope, name, discount_type, discount_value) values ('welcome10', 'platform', 'Duplicate', 'percentage', 1000)",
-      );
+      expect(error.message).toBe("That code is already taken. Choose another.");
       const found = await s.rows("select code from public.coupons where code = 'Welcome10'");
       expect(found).toEqual([{ code: "WELCOME10" }]);
     });
