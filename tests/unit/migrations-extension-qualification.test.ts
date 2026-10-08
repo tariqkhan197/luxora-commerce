@@ -27,7 +27,9 @@ const EXTENSION_OBJECTS = [
 
 function unqualifiedReferences(sql: string): string[] {
   const findings: string[] = [];
-  sql.split("\n").forEach((rawLine, index) => {
+  // Split on CRLF too: on a Windows checkout (core.autocrlf) every line ends in "\r", which `.` does not
+  // match, so the comment stripping below would miss and comments would be flagged.
+  sql.split(/\r?\n/).forEach((rawLine, index) => {
     const line = rawLine.replace(/--.*$/, "");
     if (/^\s*create extension/i.test(line)) return;
     for (const name of EXTENSION_OBJECTS) {
@@ -56,5 +58,10 @@ describe("migration extension qualification", () => {
     expect(unqualifiedReferences("  email extensions.citext not null,")).toEqual([]);
     expect(unqualifiedReferences('create extension if not exists "citext" with schema extensions;')).toEqual([]);
     expect(unqualifiedReferences("-- citext is case-insensitive")).toEqual([]);
+    // Windows line endings: comments are still ignored, real references still found.
+    expect(unqualifiedReferences("-- citext is case-insensitive\r\nselect 1;\r\n")).toEqual([]);
+    expect(unqualifiedReferences("select 1;\r\n  email citext not null,\r\n")).toEqual([
+      "line 2: email citext not null,",
+    ]);
   });
 });
