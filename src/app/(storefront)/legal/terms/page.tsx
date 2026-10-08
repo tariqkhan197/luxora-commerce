@@ -60,6 +60,15 @@ export default function TermsPage() {
           </li>
           <li>Shipping is calculated at checkout for your delivery address and shown before you place your order.</li>
           <li>
+            Brands may run time-limited flash sales. A sale price applies while the sale is running and units remain at
+            that price; the price shown when you place your order is the price you pay.
+          </li>
+          <li>
+            You can use one discount code per order. Codes do not apply to items on flash sale, and a code may have a
+            minimum spend, a usage limit and start and end dates. A code used on a paid order is not given back if the
+            order is later refunded or returned.
+          </li>
+          <li>
             {DUTIES_AND_TAXES_NOTICE} Import duties, taxes and customs fees are not included in the price and are
             payable by the recipient where charged.
           </li>

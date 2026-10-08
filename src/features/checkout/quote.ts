@@ -1,4 +1,4 @@
-import { add, money, multiply, sum, type Money } from "@/lib/money";
+import { add, money, multiply, subtract, sum, type Money } from "@/lib/money";
 
 /**
  * Pure checkout arithmetic used by the cart and checkout pages.
@@ -15,6 +15,11 @@ import { add, money, multiply, sum, type Money } from "@/lib/money";
  * shipping address, and this module only adds it up. Without a shipping quote
  * (the bag page) shipping is "calculated at checkout" and not in the total.
  * Tax is zero until Release 4b.
+ *
+ * Phase 6B: flash-sale prices arrive in the cart lines, and a discount code is
+ * evaluated and split per line by `public.cart_promotion_quote` (the same
+ * function `place_order` uses). This module never computes a discount itself;
+ * it only applies the amounts the database returned.
  */
 
 export type UnavailableReason = "unavailable" | "currency_mismatch" | "out_of_stock" | "insufficient_stock";
@@ -39,6 +44,30 @@ export interface CartLine {
   maxQuantity: number;
   purchasable: boolean;
   unavailableReason: UnavailableReason | null;
+  /** Regular price; above `unitPriceMinor` while a flash sale applies. */
+  listPriceMinor?: number;
+  /** Live flash-sale item pricing this line (null: regular price). */
+  flashSaleItemId?: string | null;
+  flashSaleEndsAt?: string | null;
+  /** A live sale exists but has fewer units left than this line's quantity. */
+  flashSaleUnitsLeft?: number | null;
+}
+
+/** The bag's discount code as evaluated by `cart_promotion_quote`. */
+export interface PromotionQuote {
+  couponId: string;
+  code: string;
+  name: string;
+  fundedBy: "platform" | "vendor";
+  discountType: "percentage" | "fixed_amount" | "free_shipping";
+  /** False when the code cannot be used right now; `message` says why. */
+  applied: boolean;
+  message: string | null;
+  discountMinor: number;
+  /** Known only once a shipping address is chosen. */
+  shippingDiscountMinor: number;
+  lineDiscounts: Record<string, number>;
+  vendorShippingDiscounts: Record<string, number>;
 }
 
 export type ShippingBlockReason = "country_not_served" | "vendor_does_not_ship";
@@ -55,7 +84,10 @@ export interface VendorShippingQuote {
 
 export interface QuoteLine extends CartLine {
   lineTotal: Money;
+  /** This line's share of the code's discount. */
+  discount: Money;
   priceChanged: boolean;
+  onFlashSale: boolean;
 }
 
 export interface VendorGroup {
@@ -64,8 +96,10 @@ export interface VendorGroup {
   storeSlug: string | null;
   lines: QuoteLine[];
   subtotal: Money;
+  discount: Money;
   /** Zero until a shipping quote is supplied. */
   shipping: Money;
+  shippingDiscount: Money;
   shippable: boolean;
   shippingReason: ShippingBlockReason | null;
   deliveryDays: { min: number | null; max: number | null } | null;
@@ -76,7 +110,13 @@ export interface CheckoutQuote {
   groups: VendorGroup[];
   itemCount: number;
   subtotal: Money;
+  /** The code's discount on items (zero without an applicable code). */
+  discount: Money;
   shipping: Money;
+  /** Free-shipping discount (zero without one, or before an address is chosen). */
+  shippingDiscount: Money;
+  /** The bag's code, applied or not (null without a code). */
+  promotion: PromotionQuote | null;
   /** False on the bag page: shipping is shown as "calculated at checkout". */
   shippingKnown: boolean;
   tax: Money;
@@ -87,8 +127,8 @@ export interface CheckoutQuote {
   unshippableGroups: VendorGroup[];
   hasPriceChanges: boolean;
   /**
-   * The bag can proceed: it has lines, all purchasable, and (when a shipping
-   * quote was supplied) every vendor ships to the destination.
+   * The bag can proceed: it has lines, all purchasable, (when a shipping quote
+   * was supplied) every vendor ships to the destination, and any code applies.
    */
   canCheckout: boolean;
 }
@@ -98,9 +138,11 @@ const DEFAULT_CURRENCY = "USD";
 export function buildCheckoutQuote(
   lines: readonly CartLine[],
   shippingQuote?: readonly VendorShippingQuote[],
+  promotion: PromotionQuote | null = null,
 ): CheckoutQuote {
   const currency = lines[0]?.currency ?? DEFAULT_CURRENCY;
   const groups = new Map<string, VendorGroup>();
+  const applied = promotion?.applied ? promotion : null;
 
   for (const line of lines) {
     if (line.currency !== currency) {
@@ -109,7 +151,9 @@ export function buildCheckoutQuote(
     const quoteLine: QuoteLine = {
       ...line,
       lineTotal: multiply(money(line.unitPriceMinor, currency), line.quantity),
+      discount: money(applied?.lineDiscounts[line.cartItemId] ?? 0, currency),
       priceChanged: line.unitPriceMinor !== line.addedPriceMinor,
+      onFlashSale: Boolean(line.flashSaleItemId),
     };
     const group = groups.get(line.vendorId) ?? {
       vendorId: line.vendorId,
@@ -117,13 +161,16 @@ export function buildCheckoutQuote(
       storeSlug: line.storeSlug,
       lines: [],
       subtotal: money(0, currency),
+      discount: money(0, currency),
       shipping: money(0, currency),
+      shippingDiscount: money(0, currency),
       shippable: true,
       shippingReason: null,
       deliveryDays: null,
     };
     group.lines.push(quoteLine);
     group.subtotal = add(group.subtotal, quoteLine.lineTotal);
+    group.discount = add(group.discount, quoteLine.discount);
     groups.set(line.vendorId, group);
   }
 
@@ -137,6 +184,10 @@ export function buildCheckoutQuote(
       group.shippable = row?.shippable ?? false;
       group.shippingReason = row ? row.reason : "vendor_does_not_ship";
       group.shipping = money(row?.shippable ? row.shippingMinor : 0, currency);
+      group.shippingDiscount = money(
+        Math.min(applied?.vendorShippingDiscounts[group.vendorId] ?? 0, group.shipping.amountMinor),
+        currency,
+      );
       group.deliveryDays =
         row?.shippable && (row.minDeliveryDays !== null || row.maxDeliveryDays !== null)
           ? { min: row.minDeliveryDays, max: row.maxDeliveryDays }
@@ -152,9 +203,17 @@ export function buildCheckoutQuote(
     vendorGroups.map((group) => group.shipping),
     currency,
   );
+  const discount = sum(
+    vendorGroups.map((group) => group.discount),
+    currency,
+  );
+  const shippingDiscount = sum(
+    vendorGroups.map((group) => group.shippingDiscount),
+    currency,
+  );
   // Tax is not calculated in Release 4a ("Duties and taxes may apply on delivery").
   const tax = money(0, currency);
-  const total = add(add(subtotal, shipping), tax);
+  const total = add(subtract(add(subtract(subtotal, discount), shipping), shippingDiscount), tax);
   const blockingLines = allLines.filter((line) => !line.purchasable);
   const unshippableGroups = vendorGroups.filter((group) => !group.shippable);
 
@@ -163,14 +222,22 @@ export function buildCheckoutQuote(
     groups: vendorGroups,
     itemCount: allLines.reduce((count, line) => count + line.quantity, 0),
     subtotal,
+    discount,
     shipping,
+    shippingDiscount,
+    promotion,
     shippingKnown,
     tax,
     total,
     blockingLines,
     unshippableGroups,
     hasPriceChanges: allLines.some((line) => line.priceChanged),
-    canCheckout: allLines.length > 0 && blockingLines.length === 0 && unshippableGroups.length === 0,
+    // A code that cannot be used right now must be removed first (the bag explains why).
+    canCheckout:
+      allLines.length > 0 &&
+      blockingLines.length === 0 &&
+      unshippableGroups.length === 0 &&
+      !(promotion && !promotion.applied),
   };
 }
 
@@ -202,4 +269,21 @@ export function deliveryEstimateLabel(days: { min: number | null; max: number | 
   if (max !== null) return `Up to ${max} days`;
   if (min !== null) return `From ${min} days`;
   return null;
+}
+
+/** "Ends Oct 9, 14:00 UTC" for a flash sale's end. */
+export function flashSaleEndsLabel(endsAt: string | null | undefined): string | null {
+  if (!endsAt) return null;
+  const date = new Date(endsAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return `Ends ${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(date)} UTC`;
+}
+
+/** D9: a live sale with fewer units left than the line's quantity. */
+export function flashSaleShortLabel(line: Pick<CartLine, "flashSaleUnitsLeft">): string | null {
+  const left = line.flashSaleUnitsLeft;
+  if (left === null || left === undefined) return null;
+  return left > 0
+    ? `Only ${left} left at the sale price — reduce the quantity to get it.`
+    : "Sold out at the sale price; charged at the regular price.";
 }

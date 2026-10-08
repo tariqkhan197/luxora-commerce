@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { AddToBagButton } from "@/features/cart/components/add-to-bag-button";
+import { flashSaleEndsLabel } from "@/features/checkout/quote";
 import { formatMoney } from "@/lib/money";
 import { asOptionRecord, type ProductVariantAvailability } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,9 @@ export function VariantSelector({ variants, currency, returnPath }: VariantSelec
   }, [variants]);
 
   if (!selected) return null;
+  // Phase 6B: a live flash-sale price (from the database view) replaces the regular price.
+  const salePrice = selected.sale_price_minor ?? 0;
+  const onSale = selected.sale_price_minor !== null && salePrice < (selected.price_minor ?? 0);
   const selectedOptions = asOptionRecord(selected.options);
 
   function pick(name: string, value: string) {
@@ -45,19 +49,32 @@ export function VariantSelector({ variants, currency, returnPath }: VariantSelec
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-baseline gap-3">
-        <p className="font-display text-3xl">{formatMoney(selected.price_minor ?? 0, currency)}</p>
-        {selected.compare_at_price_minor &&
-        selected.price_minor !== null &&
-        selected.compare_at_price_minor > selected.price_minor ? (
-          <p className="text-sm text-ink-faint line-through">
-            {formatMoney(selected.compare_at_price_minor, currency)}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <p className="font-display text-3xl">
+            {formatMoney(onSale ? salePrice : (selected.price_minor ?? 0), currency)}
           </p>
-        ) : null}
-        {!selected.in_stock ? (
-          <Badge variant="neutral">Sold out</Badge>
-        ) : selected.is_low_stock ? (
-          <Badge variant="warning">Low stock</Badge>
+          {onSale ? (
+            <p className="text-sm text-ink-faint line-through">{formatMoney(selected.price_minor ?? 0, currency)}</p>
+          ) : selected.compare_at_price_minor &&
+            selected.price_minor !== null &&
+            selected.compare_at_price_minor > selected.price_minor ? (
+            <p className="text-sm text-ink-faint line-through">
+              {formatMoney(selected.compare_at_price_minor, currency)}
+            </p>
+          ) : null}
+          {!selected.in_stock ? (
+            <Badge variant="neutral">Sold out</Badge>
+          ) : selected.is_low_stock ? (
+            <Badge variant="warning">Low stock</Badge>
+          ) : null}
+        </div>
+        {onSale ? (
+          <p className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+            <Badge variant="accent">Flash sale</Badge>
+            {flashSaleEndsLabel(selected.sale_ends_at)}
+            {selected.sale_limited ? " · Limited quantity" : ""}
+          </p>
         ) : null}
       </div>
 

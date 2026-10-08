@@ -24,6 +24,8 @@ export default async function VendorOrderDetailPage({ params }: PageProps<"/vend
   const order = await getVendorOrderDetail(id, vendor.id);
   if (!order) notFound();
   const { currency } = order;
+  // Vendor-funded part of the discounts (a Luxora code is funded by Luxora).
+  const vendorDiscount = order.discount_minor + order.shipping_discount_minor - order.platform_funded_minor;
 
   return (
     <div className="flex flex-col gap-8">
@@ -76,13 +78,15 @@ export default async function VendorOrderDetailPage({ params }: PageProps<"/vend
                   <dt className="text-ink-soft">Merchandise</dt>
                   <dd className="tabular-nums">{formatMoney(order.subtotal_minor, currency)}</dd>
                 </div>
+                {vendorDiscount > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-ink-soft">Your discount code</dt>
+                    <dd className="tabular-nums">−{formatMoney(vendorDiscount, currency)}</dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-ink-soft">Shipping charged</dt>
                   <dd className="tabular-nums">{formatMoney(order.shipping_minor, currency)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">Order total</dt>
-                  <dd className="tabular-nums">{formatMoney(order.total_minor, currency)}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-ink-soft">
@@ -101,6 +105,12 @@ export default async function VendorOrderDetailPage({ params }: PageProps<"/vend
                   </dd>
                 </div>
               </dl>
+              {order.platform_funded_minor > 0 ? (
+                <p className="mt-3 text-xs leading-relaxed text-ink-faint">
+                  The customer used a Luxora code worth {formatMoney(order.platform_funded_minor, currency)} on this
+                  order. Luxora pays it, so it does not reduce your earnings or change your commission.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
           <Link href={ROUTES.vendor.orders} className="text-sm text-ink-soft underline-offset-4 hover:underline">

@@ -5,7 +5,7 @@ import { ROUTES } from "@/config/routes";
 import { assertUser } from "@/lib/auth/dal";
 import { fromPostgrestError, runAction, type ActionResult } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
-import { addToCartSchema, updateCartItemSchema, uuidSchema } from "@/lib/validation";
+import { addToCartSchema, applyCouponSchema, updateCartItemSchema, uuidSchema } from "@/lib/validation";
 
 /**
  * Cart Server Actions. They pass only ids and quantities to the database cart
@@ -60,6 +60,30 @@ export async function clearCart(): Promise<ActionResult<void>> {
     await assertUser();
     const supabase = await createClient();
     const { error } = await supabase.rpc("clear_cart");
+    if (error) throw fromPostgrestError(error);
+    revalidateCart();
+  });
+}
+
+/** Applies a discount code to the bag; the database checks it (and limits guesses). */
+export async function applyCoupon(input: unknown): Promise<ActionResult<{ applied: boolean; message: string }>> {
+  return runAction(async () => {
+    const { code } = applyCouponSchema.parse(input);
+    await assertUser();
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("apply_cart_coupon", { p_code: code });
+    if (error) throw fromPostgrestError(error);
+    const row = data?.[0];
+    revalidateCart();
+    return { applied: Boolean(row?.applied), message: row?.message ?? "This code isn't valid." };
+  });
+}
+
+export async function removeCoupon(): Promise<ActionResult<void>> {
+  return runAction(async () => {
+    await assertUser();
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("remove_cart_coupon");
     if (error) throw fromPostgrestError(error);
     revalidateCart();
   });

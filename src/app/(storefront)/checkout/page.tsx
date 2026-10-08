@@ -7,7 +7,7 @@ import { StorageImage } from "@/components/shared/storage-image";
 import { ROUTES } from "@/config/routes";
 import { listAddresses } from "@/features/addresses/queries";
 import { addressLines } from "@/features/addresses/format";
-import { getCartLines } from "@/features/cart/queries";
+import { getCartLines, getPromotionQuote } from "@/features/cart/queries";
 import { CheckoutForm } from "@/features/checkout/components/checkout-form";
 import { getShippingQuotes, MAX_QUOTED_ADDRESSES } from "@/features/checkout/queries";
 import { buildCheckoutQuote, type CheckoutQuote } from "@/features/checkout/quote";
@@ -20,8 +20,12 @@ export const metadata: Metadata = { title: "Checkout" };
 
 export default async function CheckoutPage() {
   const { profile } = await requireUser(ROUTES.checkout);
-  const [lines, addresses] = await Promise.all([getCartLines(), listAddresses(profile.id)]);
-  const quote = buildCheckoutQuote(lines);
+  const [lines, addresses, promotion] = await Promise.all([
+    getCartLines(),
+    listAddresses(profile.id),
+    getPromotionQuote(),
+  ]);
+  const quote = buildCheckoutQuote(lines, undefined, promotion);
   // Unavailable or out-of-stock lines must be resolved in the bag first.
   if (!quote.canCheckout) redirect(ROUTES.cart);
 
@@ -33,9 +37,19 @@ export default async function CheckoutPage() {
     .filter((address) => address.type !== "billing")
     .sort((a, b) => Number(b.is_default_shipping) - Number(a.is_default_shipping))
     .slice(0, MAX_QUOTED_ADDRESSES);
-  const shippingByAddress = await getShippingQuotes(shippingAddresses.map((address) => address.id));
+  const addressIds = shippingAddresses.map((address) => address.id);
+  const [shippingByAddress, promotionByAddress] = await Promise.all([
+    getShippingQuotes(addressIds),
+    // Free-shipping amounts depend on the destination: quote the code per address.
+    promotion
+      ? Promise.all(addressIds.map(async (id) => [id, await getPromotionQuote(id)] as const)).then(Object.fromEntries)
+      : Promise.resolve({} as Record<string, typeof promotion>),
+  ]);
   const quotesByAddress: Record<string, CheckoutQuote> = Object.fromEntries(
-    Object.entries(shippingByAddress).map(([id, rows]) => [id, buildCheckoutQuote(lines, rows)]),
+    Object.entries(shippingByAddress).map(([id, rows]) => [
+      id,
+      buildCheckoutQuote(lines, rows, promotionByAddress[id] ?? promotion),
+    ]),
   );
 
   return (
@@ -76,7 +90,10 @@ export default async function CheckoutPage() {
                           {line.variantTitle} · Qty {line.quantity}
                         </span>
                       </span>
-                      <span className="tabular-nums">{formatMoney(line.lineTotal.amountMinor, quote.currency)}</span>
+                      <span className="text-right tabular-nums">
+                        {formatMoney(line.lineTotal.amountMinor, quote.currency)}
+                        {line.onFlashSale ? <span className="block text-xs text-ink-faint">Flash sale</span> : null}
+                      </span>
                     </li>
                   ))}
                 </ul>

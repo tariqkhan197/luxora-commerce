@@ -52,6 +52,7 @@ export const ROUTES = {
     customers: "/vendor/customers",
     analytics: "/vendor/analytics",
     coupons: "/vendor/coupons",
+    flashSales: "/vendor/flash-sales",
     storefront: "/vendor/storefront",
     payouts: "/vendor/payouts",
     settings: "/vendor/settings",

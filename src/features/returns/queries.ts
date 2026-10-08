@@ -18,7 +18,7 @@ const RETURN_SELECT = `
   vendors!return_requests_vendor_id_fkey ( display_name ),
   return_request_items (
     id, quantity, reason,
-    order_items!return_request_items_order_item_id_fkey ( product_name, variant_title, sku, unit_price_minor )
+    order_items!return_request_items_order_item_id_fkey ( product_name, variant_title, sku, unit_price_minor, quantity, total_minor )
   )
 `;
 

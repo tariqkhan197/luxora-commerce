@@ -180,12 +180,12 @@ and the database (RLS policies + triggers). Only the database layer is authorita
 | 4b ✅ | Stripe payments in test mode (Luxora as merchant of record), refunds, disputes, vendor and platform ledgers, manual payouts, Stripe Tax readiness (tax disabled)                                  |
 | 5 ✅  | Customer returns (RMA): request within 14 days of delivery, vendor approval with return instructions, return tracking, receipt with restock, admin refund through Stripe (test mode)              |
 | 6A ✅ | Product reviews and ratings: verified buyers within 30 days of delivery, admin pre-moderation, up to 4 photos, one vendor reply, rating totals on product pages and cards                         |
-| 6B    | Promotions: coupons and flash sales                                                                                                                                                               |
+| 6B ✅ | Promotions: Luxora and vendor discount codes, vendor flash sales, exact discount allocation, funding-aware commission, ledgers, refunds and Stripe test-mode discounts                            |
 | 7     | Subscriptions, featured placements, analytics, content management, loyalty, notifications                                                                                                         |
 
 ## Status
 
-Phases 1–3, Release 4a, Phase 4b, Phase 5 and Phase 6A are complete and verified (`npm run check`). The application is **not
+Phases 1–3, Release 4a, Phase 4b, Phase 5 and Phases 6A–6B are complete and verified (`npm run check`). The application is **not
 production-ready**: payments run in Stripe **test mode only** (live keys and live events are refused); tax is not
 collected (checkout states "Duties and taxes may apply on delivery."); and the company details on the legal pages
 are placeholders (see below).
@@ -308,3 +308,29 @@ Full runbook: [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
   product cards show stars and count. Reviewers appear as "First L.", always marked as a verified purchase.
 - Customers can delete their own review at any time. There is no email notification yet (no email provider);
   status is visible in the account.
+
+### Phase 6B workflows (coupons and flash sales)
+
+- **Who pays.** Luxora codes (created at `/admin/coupons`) are paid by Luxora: vendor earnings and commission stay
+  as if there were no discount, and the cost is booked as `promotion_cost` when the order is paid. Luxora codes
+  can also give free shipping (Luxora pays the shipping). Vendor codes (`/vendor/coupons`) and flash sales
+  (`/vendor/flash-sales`) are paid by the vendor: commission is charged on the discounted or sale price.
+- **Rules.** One code per order, entered in the bag. Codes never discount flash-sale items. A code may have a
+  minimum spend (on the items it discounts; on the whole bag for free shipping), total and per-customer limits and
+  dates. Codes that would take the total below Stripe's minimum (0.50) are refused. Failed codes are limited to
+  10 per customer per hour, and unknown or disabled codes get the same "isn't valid" message.
+- **Exact amounts.** The database evaluates the code and splits the discount across the eligible lines by
+  largest remainder (`cart_promotion_quote`, reused by `place_order`), so line, vendor and order amounts always add
+  up. Percentages round half-up.
+- **Reservations.** Placing an order reserves one use of the code and the flash-sale units (lock order: bag →
+  stock → sale items → code). They are released only if the order is never paid (expiry, cancellation, failed
+  payment); refunds and returns never give them back.
+- **Flash sales.** A sale price must be below the regular price and is never above it if the vendor later cuts
+  the price. A line gets the sale price only if its whole quantity fits in the units left; otherwise it is charged
+  at the regular price with a notice. A variant cannot be in two overlapping sales. Items and prices lock once a
+  sale starts (it can be ended early). Admins can disable any code or sale with a reason; the vendor cannot switch
+  a disabled code back on, and orders already placed keep their price.
+- **Refunds and returns.** A refund returns what was paid for the refunded units (the line's paid total is split
+  cumulatively, so refunding every unit returns it exactly). Only shipping the customer paid is refundable.
+- **Stripe (test mode).** The checkout session lists items at the price charged per unit and carries the order's
+  discount as a one-time Stripe coupon; shipping is charged after any free-shipping discount.

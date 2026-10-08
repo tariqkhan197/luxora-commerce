@@ -3,7 +3,11 @@ import "server-only";
 import { ROUTES } from "@/config/routes";
 import { getClientEnv } from "@/lib/env";
 import { AppError, fromPostgrestError } from "@/lib/errors";
-import { buildCheckoutSessionParams, type CheckoutOrder } from "@/lib/payments/checkout-session";
+import {
+  buildCheckoutSessionParams,
+  buildDiscountCouponParams,
+  type CheckoutOrder,
+} from "@/lib/payments/checkout-session";
 import { getStripe, getStripeConfig } from "@/lib/payments/stripe-client";
 import { STORAGE_BUCKETS, storagePublicUrl } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -60,7 +64,7 @@ async function loadCheckoutOrder(orderId: string): Promise<CheckoutOrder & { cus
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_number, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, customer_email, customer_id, shipping_address, order_items!order_items_order_id_fkey(product_name, variant_title, sku, quantity, unit_price_minor, total_minor, image_path, tax_code, created_at)",
+      "id, order_number, currency, subtotal_minor, discount_minor, shipping_minor, shipping_discount_minor, tax_minor, total_minor, coupon_code, customer_email, customer_id, shipping_address, order_items!order_items_order_id_fkey(product_name, variant_title, sku, quantity, unit_price_minor, discount_minor, total_minor, image_path, tax_code, created_at)",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -75,9 +79,12 @@ async function loadCheckoutOrder(orderId: string): Promise<CheckoutOrder & { cus
     orderNumber: data.order_number,
     currency: data.currency,
     subtotalMinor: data.subtotal_minor,
+    discountMinor: data.discount_minor,
     shippingMinor: data.shipping_minor,
+    shippingDiscountMinor: data.shipping_discount_minor,
     taxMinor: data.tax_minor,
     totalMinor: data.total_minor,
+    couponCode: data.coupon_code,
     customerEmail: data.customer_email,
     customerId: data.customer_id,
     shippingAddress: asAddress(data.shipping_address),
@@ -89,6 +96,7 @@ async function loadCheckoutOrder(orderId: string): Promise<CheckoutOrder & { cus
         sku: item.sku,
         quantity: item.quantity,
         unitPriceMinor: item.unit_price_minor,
+        discountMinor: item.discount_minor,
         totalMinor: item.total_minor,
         // Stripe fetches product images itself: only publicly reachable https URLs are useful.
         imageUrl: imageUrl?.startsWith("https://") ? imageUrl : null,
@@ -119,15 +127,24 @@ export async function startCheckout(orderId: string): Promise<string> {
     order.shippingAddress.full_name ?? null,
   );
   const expiresAt = new Date(attempt.session_expires_at);
+  const idempotencySuffix = `${orderId}:${attempt.attempt_no}:${Math.floor(expiresAt.getTime() / 1000)}`;
+  // Phase 6B: a one-time Stripe coupon carries the order's discount (test mode).
+  const discountCoupon =
+    (order.discountMinor ?? 0) > 0
+      ? await stripe.coupons.create(buildDiscountCouponParams(order, { attemptNo: attempt.attempt_no, expiresAt }), {
+          idempotencyKey: `luxora-coupon:${idempotencySuffix}`,
+        })
+      : null;
   const params = buildCheckoutSessionParams(order, {
     attemptNo: attempt.attempt_no,
     expiresAt,
     successUrl: successUrl(),
     cancelUrl: cancelUrl(orderId),
     customerId,
+    discountCouponId: discountCoupon?.id ?? null,
   });
   const session = await stripe.checkout.sessions.create(params, {
-    idempotencyKey: `luxora-checkout:${orderId}:${attempt.attempt_no}:${Math.floor(expiresAt.getTime() / 1000)}`,
+    idempotencyKey: `luxora-checkout:${idempotencySuffix}`,
   });
   if (!session.url) throw new Error(`Stripe returned no URL for checkout session ${session.id}`);
 

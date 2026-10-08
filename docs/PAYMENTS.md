@@ -68,10 +68,38 @@ come with `card`).
 | `payouts.hold_days_after_delivery`      | `14`       | Earnings become payable this many days after delivery               |
 | `payments.live_mode_enabled`            | `false`    | Database refuses live-mode Stripe data                              |
 | `tax.collection_enabled`                | `false`    | Stripe Tax disabled                                                 |
+| `payments.minimum_charge_minor`         | `50`       | Discount codes cannot take an order total below this (Stripe min.)  |
+| `coupons.max_failed_attempts_per_hour`  | `10`       | Failed discount-code attempts allowed per customer per hour         |
 
 Every fee and loss is recorded in `platform_ledger_entries`: `processing_fee`, `refund_loss`,
-`commission_reversed`, `dispute_loss`, `dispute_fee` and `dispute_recovered`. That keeps the books exact today
-and lets the policy change later without changing the architecture.
+`commission_reversed`, `dispute_loss`, `dispute_fee`, `dispute_recovered`, `promotion_cost` and
+`promotion_cost_reversed`. That keeps the books exact today and lets the policy change later without changing the
+architecture.
+
+## Promotions (Phase 6B)
+
+- **Luxora codes** (and free shipping) are paid by Luxora. The vendor order records the customer's discount and
+  `platform_funded_minor`; vendor earnings = total + platform-funded − commission − fee, so earnings and commission
+  are unchanged. When the order is paid, `promotion_cost` is posted per vendor order.
+- **Vendor codes and flash sales** are paid by the vendor: commission is charged on the discounted (or sale) price
+  and no promotion cost is booked.
+- **Checkout session.** Line items stay at the price charged per unit; the order discount is a one-time Stripe
+  coupon (`amount_off` = the order discount, single use, expiring with the session, idempotency key per attempt);
+  the shipping option is the shipping the customer pays. `assertCheckoutAmounts` refuses any session whose lines,
+  discount and shipping do not add up to the database total. The webhook amount check is unchanged.
+- **Refunds.** Each refund returns what was paid for the refunded units (the line's paid total, split cumulatively)
+  and only the shipping the customer paid. Under today's policy (Luxora bears refunds) the refund loss equals the
+  amount refunded and promotion costs are not reversed. If `refunds.vendor_liability` becomes `net_of_commission`,
+  the vendor repays its own side of the refunded units, commission is reversed and Luxora's funded share is booked
+  back as `promotion_cost_reversed`, so Luxora's result on a fully refunded order is zero.
+
+| Scenario (test mode)     | How                                                             | Expect                                                                |
+| ------------------------ | --------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Luxora code              | Admin → Coupons → New code (10%); apply in the bag; pay `4242…` | Stripe page shows "Code …"; vendor earnings unchanged; promotion cost |
+| Vendor code              | Vendor → Coupons → New code; apply in the bag; pay              | Discount only on that vendor's items; commission on the net price     |
+| Free shipping            | Admin → New code, type Free shipping                            | Shipping charged 0; Luxora pays the vendor's shipping                 |
+| Flash sale               | Vendor → Flash sales → New flash sale with an item; buy it      | Sale price charged; codes do not apply to it                          |
+| Refund a discounted item | Admin → order → Refund one unit                                 | Refund = what was paid for that unit                                  |
 
 ## Local setup (test mode)
 

@@ -11,6 +11,11 @@ export interface OrderLine {
   quantity: number;
   unit_price_minor: number;
   total_minor: number;
+  /** Regular price when the unit price was a flash-sale price (Phase 6B). */
+  list_price_minor?: number | null;
+  /** Discount-code share of the line. */
+  discount_minor?: number;
+  flash_sale_item_id?: string | null;
 }
 
 /** Line items rendered from the order snapshot (never from the live catalog). */
@@ -32,6 +37,13 @@ export function OrderLineItems({ items, currency }: { items: OrderLine[]; curren
               <span className="text-ink-soft">{item.variant_title}</span>
               <span className="text-xs text-ink-faint">
                 SKU {item.sku} · {item.quantity} × {formatMoney(item.unit_price_minor, currency)}
+                {item.flash_sale_item_id && item.list_price_minor && item.list_price_minor > item.unit_price_minor ? (
+                  <>
+                    {" "}
+                    <span className="line-through">{formatMoney(item.list_price_minor, currency)}</span> · Flash sale
+                  </>
+                ) : null}
+                {item.discount_minor ? ` · Code −${formatMoney(item.discount_minor, currency)}` : null}
               </span>
             </div>
             <p className="text-sm tabular-nums">{formatMoney(item.total_minor, currency)}</p>

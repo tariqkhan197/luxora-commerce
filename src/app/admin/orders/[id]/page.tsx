@@ -35,6 +35,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps<"/admin
     a.vendor_order_number.localeCompare(b.vendor_order_number),
   );
   const commission = vendorOrders.reduce((total, vo) => total + vo.commission_minor, 0);
+  const luxoraFunded = vendorOrders.reduce((total, vo) => total + vo.platform_funded_minor, 0);
   const awaitingPayment = order.status === "pending" && order.payment_status === "pending";
 
   return (
@@ -94,12 +95,14 @@ export default async function AdminOrderDetailPage({ params }: PageProps<"/admin
                         vendorOrderId={vendorOrder.id}
                         vendorOrderNumber={vendorOrder.vendor_order_number}
                         currency={currency}
-                        shippingMinor={vendorOrder.shipping_minor}
+                        shippingMinor={vendorOrder.shipping_minor - vendorOrder.shipping_discount_minor}
                         items={vendorOrder.order_items.map((item) => ({
                           id: item.id,
                           productName: item.product_name,
                           variantTitle: item.variant_title,
-                          unitPriceMinor: item.unit_price_minor,
+                          quantity: item.quantity,
+                          paidMinor: item.total_minor,
+                          refundedQuantity: item.refunded_quantity,
                           refundable: item.quantity - item.refunded_quantity,
                         }))}
                       />
@@ -111,8 +114,19 @@ export default async function AdminOrderDetailPage({ params }: PageProps<"/admin
               <CardContent className="flex flex-col gap-4">
                 <OrderLineItems items={vendorOrder.order_items} currency={currency} />
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-1 border-t border-line pt-3 text-sm sm:grid-cols-4">
-                  <dt className="text-ink-soft">Total</dt>
+                  <dt className="text-ink-soft">Customer paid</dt>
                   <dd className="tabular-nums">{formatMoney(vendorOrder.total_minor, currency)}</dd>
+                  {vendorOrder.discount_minor + vendorOrder.shipping_discount_minor > 0 ? (
+                    <>
+                      <dt className="text-ink-soft">
+                        Discounts ({vendorOrder.platform_funded_minor > 0 ? "funded by Luxora" : "funded by the vendor"}
+                        )
+                      </dt>
+                      <dd className="tabular-nums">
+                        −{formatMoney(vendorOrder.discount_minor + vendorOrder.shipping_discount_minor, currency)}
+                      </dd>
+                    </>
+                  ) : null}
                   <dt className="text-ink-soft">Commission ({formatBasisPoints(vendorOrder.commission_rate_bps)})</dt>
                   <dd className="tabular-nums">{formatMoney(vendorOrder.commission_minor, currency)}</dd>
                   <dt className="text-ink-soft">Payment fee</dt>
@@ -136,10 +150,24 @@ export default async function AdminOrderDetailPage({ params }: PageProps<"/admin
                   <dt className="text-ink-soft">Customer total</dt>
                   <dd className="tabular-nums">{formatMoney(order.total_minor, currency)}</dd>
                 </div>
+                {order.discount_minor + order.shipping_discount_minor > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-ink-soft">Discounts{order.coupon_code ? ` (${order.coupon_code})` : ""}</dt>
+                    <dd className="tabular-nums">
+                      −{formatMoney(order.discount_minor + order.shipping_discount_minor, currency)}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-ink-soft">Platform commission</dt>
                   <dd className="tabular-nums">{formatMoney(commission, currency)}</dd>
                 </div>
+                {luxoraFunded > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-ink-soft">Luxora-funded promotion</dt>
+                    <dd className="tabular-nums">−{formatMoney(luxoraFunded, currency)}</dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-ink-soft">Payments recorded</dt>
                   <dd className="tabular-nums">

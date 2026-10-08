@@ -18,30 +18,32 @@ PostgreSQL (Supabase). Migrations in `supabase/migrations/`, applied in filename
 
 ## Migrations
 
-| File                                         | Contents                                                                                                                                                                                                               |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0001_foundation_extensions_enums`           | Extensions, all enums, domains, `set_updated_at()`                                                                                                                                                                     |
-| `0002_identity_security`                     | `roles`, `profiles`, auth trigger, RLS helpers, `platform_settings`, `audit_logs` + `log_audit_event()`                                                                                                                |
-| `0003_vendors`                               | `vendors`, `vendor_users`, `vendor_applications`, `stores`, membership helpers, locked-column trigger                                                                                                                  |
-| `0004_catalog_inventory`                     | `categories`, `brands`, `products`, `product_variants`, `product_images`, `collections`, `collection_products`, `inventory`, `inventory_movements`, safe inventory functions                                           |
-| `0005_customer_data`                         | `addresses`, `carts`, `cart_items`, `wishlists`, `wishlist_items`                                                                                                                                                      |
-| `0006_orders_payments`                       | `orders`, `vendor_orders`, `order_items`, `payments`, `payment_transactions`, `returns`, `refunds`, order number generator                                                                                             |
-| `0007_reviews_promotions`                    | `reviews`, `review_images`, `coupons`, `coupon_usages`, `flash_sales`, `flash_sale_items`                                                                                                                              |
-| `0008_finance_monetization`                  | `commission_rules`, `commissions`, `payouts`, `payout_items`, `subscription_plans`, `vendor_subscriptions`, `featured_products`, `featured_brands`, `resolve_commission_rate_bps()`, `calculate_commission_minor()`    |
-| `0009_engagement_content_analytics`          | `loyalty_accounts`, `loyalty_transactions`, `notifications`, `content_sections`, `banners`, `analytics_events`                                                                                                         |
-| `0010_storage`                               | Buckets and `storage.objects` policies                                                                                                                                                                                 |
-| `0011_grants`                                | Explicit privileges for `anon`, `authenticated`, `service_role`                                                                                                                                                        |
-| `0012_phase2_vendor_catalog_workflows`       | `products.search_vector`, vendor review and product moderation functions, `product_listings` and `product_variant_availability` views                                                                                  |
-| `20261006000013_phase3_cart_checkout_orders` | Cart functions, shared stock helpers, `place_order()`, expiry and cancellation, `confirm_order_payment()`, immutable order financials, vendor fulfilment rules, tightened grants                                       |
-| `20261007000014_admin_taxonomy`              | `catalog-assets` bucket, category depth/cycle limits, delete guards for used categories/brands, `set_category_active()`, taxonomy audit trigger, brand usage rule, vendor brand created on approval                    |
-| `20261007000015_shipping_zones_rates`        | `shipping_zones`, `shipping_zone_countries`, `vendor_shipping_rates`, `admin_save_shipping_zone()`, publish gate, `checkout_shipping_quote()`, `place_order()` charging shipping                                       |
-| `20261007000016_legal_acceptance`            | `vendor_applications.terms_version` / `terms_accepted_at`, recorded by the database on submission                                                                                                                      |
-| `20261008000017_payment_enums`               | `payment_status` values `processing` / `expired`, payment attempt and webhook event types (separate so new enum values commit before use)                                                                              |
-| `20261008000018_stripe_payments`             | `payment_attempts`, `payment_customers`, `payment_webhook_events`, attempt/session functions, idempotent `confirm_order_payment` v2, payment-aware expiry and cancellation, restore cart, currency and 100-line guards |
-| `20261008000019_refunds_ledgers`             | `refund_items`, `vendor_ledger_entries`, `platform_ledger_entries`, `payment_disputes`, refund/dispute/payout functions, `vendor_balances`, finance tables read-only for API roles                                     |
-| `20261008000020_tax_readiness`               | Tax codes on products, categories and order items (snapshot), `orders.tax_calculation_ref`; tax collection stays disabled                                                                                              |
-| `20261009000021_returns_rma`                 | `return_requests` + `return_request_items` (RMA per vendor order), customer/vendor/admin return functions, return refunds through `request_refund`, legacy `returns` table made read-only                              |
-| `20261010000022_reviews`                     | Verified-purchase reviews with pre-moderation, photos, vendor replies; `product_review_stats` totals; review writes function-only; `product_listings` gains `review_count`/`rating_sum`; review photo storage policies |
+| File                                         | Contents                                                                                                                                                                                                                |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0001_foundation_extensions_enums`           | Extensions, all enums, domains, `set_updated_at()`                                                                                                                                                                      |
+| `0002_identity_security`                     | `roles`, `profiles`, auth trigger, RLS helpers, `platform_settings`, `audit_logs` + `log_audit_event()`                                                                                                                 |
+| `0003_vendors`                               | `vendors`, `vendor_users`, `vendor_applications`, `stores`, membership helpers, locked-column trigger                                                                                                                   |
+| `0004_catalog_inventory`                     | `categories`, `brands`, `products`, `product_variants`, `product_images`, `collections`, `collection_products`, `inventory`, `inventory_movements`, safe inventory functions                                            |
+| `0005_customer_data`                         | `addresses`, `carts`, `cart_items`, `wishlists`, `wishlist_items`                                                                                                                                                       |
+| `0006_orders_payments`                       | `orders`, `vendor_orders`, `order_items`, `payments`, `payment_transactions`, `returns`, `refunds`, order number generator                                                                                              |
+| `0007_reviews_promotions`                    | `reviews`, `review_images`, `coupons`, `coupon_usages`, `flash_sales`, `flash_sale_items`                                                                                                                               |
+| `0008_finance_monetization`                  | `commission_rules`, `commissions`, `payouts`, `payout_items`, `subscription_plans`, `vendor_subscriptions`, `featured_products`, `featured_brands`, `resolve_commission_rate_bps()`, `calculate_commission_minor()`     |
+| `0009_engagement_content_analytics`          | `loyalty_accounts`, `loyalty_transactions`, `notifications`, `content_sections`, `banners`, `analytics_events`                                                                                                          |
+| `0010_storage`                               | Buckets and `storage.objects` policies                                                                                                                                                                                  |
+| `0011_grants`                                | Explicit privileges for `anon`, `authenticated`, `service_role`                                                                                                                                                         |
+| `0012_phase2_vendor_catalog_workflows`       | `products.search_vector`, vendor review and product moderation functions, `product_listings` and `product_variant_availability` views                                                                                   |
+| `20261006000013_phase3_cart_checkout_orders` | Cart functions, shared stock helpers, `place_order()`, expiry and cancellation, `confirm_order_payment()`, immutable order financials, vendor fulfilment rules, tightened grants                                        |
+| `20261007000014_admin_taxonomy`              | `catalog-assets` bucket, category depth/cycle limits, delete guards for used categories/brands, `set_category_active()`, taxonomy audit trigger, brand usage rule, vendor brand created on approval                     |
+| `20261007000015_shipping_zones_rates`        | `shipping_zones`, `shipping_zone_countries`, `vendor_shipping_rates`, `admin_save_shipping_zone()`, publish gate, `checkout_shipping_quote()`, `place_order()` charging shipping                                        |
+| `20261007000016_legal_acceptance`            | `vendor_applications.terms_version` / `terms_accepted_at`, recorded by the database on submission                                                                                                                       |
+| `20261008000017_payment_enums`               | `payment_status` values `processing` / `expired`, payment attempt and webhook event types (separate so new enum values commit before use)                                                                               |
+| `20261008000018_stripe_payments`             | `payment_attempts`, `payment_customers`, `payment_webhook_events`, attempt/session functions, idempotent `confirm_order_payment` v2, payment-aware expiry and cancellation, restore cart, currency and 100-line guards  |
+| `20261008000019_refunds_ledgers`             | `refund_items`, `vendor_ledger_entries`, `platform_ledger_entries`, `payment_disputes`, refund/dispute/payout functions, `vendor_balances`, finance tables read-only for API roles                                      |
+| `20261008000020_tax_readiness`               | Tax codes on products, categories and order items (snapshot), `orders.tax_calculation_ref`; tax collection stays disabled                                                                                               |
+| `20261009000021_returns_rma`                 | `return_requests` + `return_request_items` (RMA per vendor order), customer/vendor/admin return functions, return refunds through `request_refund`, legacy `returns` table made read-only                               |
+| `20261010000022_reviews`                     | Verified-purchase reviews with pre-moderation, photos, vendor replies; `product_review_stats` totals; review writes function-only; `product_listings` gains `review_count`/`rating_sum`; review photo storage policies  |
+| `20261011000023_promotion_enums`             | `promotion_cost` / `promotion_cost_reversed` ledger types, `coupon_usage_status`                                                                                                                                        |
+| `20261011000024_promotions`                  | Coupons and flash sales: flash prices in `cart_lines()` and catalog views, code evaluation and allocation, funding columns on orders, reservations, refunds of paid amounts, management functions, function-only writes |
 
 ## Entity relationships
 
@@ -131,7 +133,8 @@ Movements are immutable (`prevent_mutation` trigger).
 | `payments`, `payment_transactions`     | —                          | own payments                | **none**                                 | read                            |
 | `returns`                              | —                          | own; request                | own vendor; review                       | all                             |
 | `refunds`, `commissions`, `payouts`    | —                          | own refunds                 | own (read)                               | all                             |
-| `coupons`                              | —                          | — (validated server-side)   | own vendor coupons                       | all                             |
+| `coupons`, `coupon_usages`             | —                          | own usages; no codes        | own vendor (read); functions write       | read; functions write           |
+| `flash_sales`, `flash_sale_items`      | live sales                 | live sales                  | own vendor (read); functions write       | read; functions write           |
 | `reviews`, `review_images`             | approved                   | own (any status); functions | approved; reply via function             | read; moderate via function     |
 | content, banners, plans, placements    | active                     | active                      | active (+ own placements)                | all                             |
 | `audit_logs`, `analytics_events`       | —                          | —                           | own vendor events                        | read                            |
@@ -296,6 +299,32 @@ Every write is an audited security-definer function:
 
 The Phase 1 policies that let customers and vendors write reviews directly (guarded only by a column trigger)
 were dropped with that trigger.
+
+## Coupons and flash sales (Phase 6B)
+
+Money columns: `orders.discount_minor` (code discount on items), `orders.shipping_discount_minor`,
+`orders.coupon_id`/`coupon_code`; `vendor_orders.discount_minor`, `shipping_discount_minor` and
+`platform_funded_minor` (what Luxora pays); `order_items.discount_minor`, `platform_discount_minor`,
+`list_price_minor` (regular price) and `flash_sale_item_id`. Constraints:
+`total = subtotal − discount + shipping − shipping_discount + tax` (orders and vendor orders) and
+`vendor_earnings = total + platform_funded − commission − fee`. Commission per line is on the line total minus any
+vendor-funded discount.
+
+| Function                                                                          | Caller                      | Effect                                                                                                 |
+| --------------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `cart_lines()`                                                                    | customer                    | Adds the regular price, the live flash-sale item, its end, and units left when the line does not fit   |
+| `apply_cart_coupon(code)` / `remove_cart_coupon()`                                | customer                    | Puts a code on the bag (checked; failed attempts throttled)                                            |
+| `cart_promotion_quote(address?)`                                                  | customer                    | The code's discount split per line and free shipping per vendor (the same function `place_order` uses) |
+| `place_order(...)`                                                                | customer                    | Locks bag → stock → sale items → code; writes funded amounts; reserves the code use and sale units     |
+| `save_coupon(...)` / `set_coupon_active(id, on)`                                  | vendor owner/manager, admin | Vendor codes (no free shipping) or Luxora codes; code and discount lock after first use                |
+| `admin_set_coupon_disabled(id, disabled, reason)`                                 | admin                       | Disables any code; its owner cannot switch it back on                                                  |
+| `save_flash_sale(...)` / `set_flash_sale_items(id, items)` / `end_flash_sale(id)` | vendor owner/manager        | Own variants only, price below regular, no overlapping sales; items lock once the sale starts          |
+| `admin_disable_flash_sale(id, reason)`                                            | admin                       | Ends a sale at once                                                                                    |
+
+Unpaid orders release their code use and sale units in `release_order_reservations_internal` (expiry,
+cancellation, failed payment). Paid orders mark the use `redeemed` and post `promotion_cost`; refunds and returns
+never restore uses or units. `request_refund` refunds what was paid for the units (cumulative split of the line's
+paid total) and only the shipping the customer paid. All writes are audited (`coupon.*`, `flash_sale.*`).
 
 ## Audit log
 

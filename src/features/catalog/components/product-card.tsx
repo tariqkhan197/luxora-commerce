@@ -17,7 +17,14 @@ export function priceLabel(listing: Pick<ProductListing, "min_price_minor" | "ma
 
 export function ProductCard({ listing, priority }: { listing: ProductListing; priority?: boolean }) {
   if (!listing.slug || !listing.name) return null;
+  const flashPrice =
+    listing.flash_min_price_minor !== null &&
+    listing.min_price_minor !== null &&
+    listing.flash_min_price_minor < listing.min_price_minor
+      ? listing.flash_min_price_minor
+      : null;
   const onSale =
+    flashPrice === null &&
     listing.compare_at_price_minor !== null &&
     listing.min_price_minor !== null &&
     listing.compare_at_price_minor > listing.min_price_minor;
@@ -35,6 +42,7 @@ export function ProductCard({ listing, priority }: { listing: ProductListing; pr
         />
         <div className="absolute top-3 left-3 flex gap-2">
           {!listing.in_stock ? <Badge variant="neutral">Sold out</Badge> : null}
+          {flashPrice !== null ? <Badge variant="accent">Flash sale</Badge> : null}
           {onSale ? <Badge variant="accent">Sale</Badge> : null}
         </div>
       </Link>
@@ -52,7 +60,15 @@ export function ProductCard({ listing, priority }: { listing: ProductListing; pr
           </Link>
         </h3>
         <p className="text-sm text-ink-soft">
-          {priceLabel(listing)}
+          {flashPrice !== null ? (
+            <>
+              {listing.min_price_minor !== listing.max_price_minor ? "From " : ""}
+              {formatMoney(flashPrice, listing.currency ?? "USD")}
+              <span className="ml-2 text-xs text-ink-faint line-through">{priceLabel(listing)}</span>
+            </>
+          ) : (
+            priceLabel(listing)
+          )}
           {onSale && listing.compare_at_price_minor ? (
             <span className="ml-2 text-xs text-ink-faint line-through">
               {formatMoney(listing.compare_at_price_minor, listing.currency ?? "USD")}

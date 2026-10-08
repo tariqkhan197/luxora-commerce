@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildCheckoutQuote,
   deliveryEstimateLabel,
+  flashSaleShortLabel,
+  type PromotionQuote,
   shippingBlockLabel,
   unavailableLabel,
   type CartLine,
@@ -162,6 +164,90 @@ describe("buildCheckoutQuote", () => {
 
   it("refuses to mix currencies", () => {
     expect(() => buildCheckoutQuote([line(), line({ currency: "EUR" })])).toThrow(/one currency/);
+  });
+});
+
+describe("promotions (Phase 6B)", () => {
+  function promotion(overrides: Partial<PromotionQuote> = {}): PromotionQuote {
+    return {
+      couponId: "coupon-1",
+      code: "SPRING10",
+      name: "Spring",
+      fundedBy: "platform",
+      discountType: "percentage",
+      applied: true,
+      message: null,
+      discountMinor: 1_300,
+      shippingDiscountMinor: 0,
+      lineDiscounts: {},
+      vendorShippingDiscounts: {},
+      ...overrides,
+    };
+  }
+
+  it("applies the database's per-line discounts and free shipping to the totals", () => {
+    const a = line({ vendorId: "a", unitPriceMinor: 5_000, addedPriceMinor: 5_000, quantity: 2 });
+    const b = line({ vendorId: "b", unitPriceMinor: 3_000, addedPriceMinor: 3_000 });
+    const shipping: VendorShippingQuote[] = [
+      {
+        vendorId: "a",
+        shippable: true,
+        shippingMinor: 500,
+        minDeliveryDays: null,
+        maxDeliveryDays: null,
+        reason: null,
+      },
+      {
+        vendorId: "b",
+        shippable: true,
+        shippingMinor: 700,
+        minDeliveryDays: null,
+        maxDeliveryDays: null,
+        reason: null,
+      },
+    ];
+    const quote = buildCheckoutQuote(
+      [a, b],
+      shipping,
+      promotion({
+        lineDiscounts: { [a.cartItemId]: 1_000, [b.cartItemId]: 300 },
+        vendorShippingDiscounts: { a: 500, b: 9_999 },
+      }),
+    );
+    expect(quote.groups.map((g) => [g.vendorId, g.discount.amountMinor, g.shippingDiscount.amountMinor])).toEqual([
+      ["a", 1_000, 500],
+      ["b", 300, 700], // never more than the shipping charged
+    ]);
+    expect(quote.discount.amountMinor).toBe(1_300);
+    expect(quote.shippingDiscount.amountMinor).toBe(1_200);
+    expect(quote.total.amountMinor).toBe(13_000 - 1_300 + 1_200 - 1_200);
+    expect(quote.canCheckout).toBe(true);
+  });
+
+  it("ignores a code that does not apply and blocks checkout until it is removed", () => {
+    const a = line({ unitPriceMinor: 5_000, addedPriceMinor: 5_000 });
+    const quote = buildCheckoutQuote(
+      [a],
+      undefined,
+      promotion({ applied: false, message: "This code has expired.", lineDiscounts: { [a.cartItemId]: 500 } }),
+    );
+    expect(quote.discount.amountMinor).toBe(0);
+    expect(quote.total.amountMinor).toBe(5_000);
+    expect(quote.canCheckout).toBe(false);
+  });
+
+  it("marks flash-sale lines and explains when the sale price no longer fits", () => {
+    const quote = buildCheckoutQuote([
+      line({ unitPriceMinor: 6_000, addedPriceMinor: 6_000, listPriceMinor: 10_000, flashSaleItemId: "fsi-1" }),
+    ]);
+    expect(quote.groups[0].lines[0].onFlashSale).toBe(true);
+    expect(flashSaleShortLabel({ flashSaleUnitsLeft: 2 })).toBe(
+      "Only 2 left at the sale price — reduce the quantity to get it.",
+    );
+    expect(flashSaleShortLabel({ flashSaleUnitsLeft: 0 })).toBe(
+      "Sold out at the sale price; charged at the regular price.",
+    );
+    expect(flashSaleShortLabel({ flashSaleUnitsLeft: null })).toBeNull();
   });
 });
 

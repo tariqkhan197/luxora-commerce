@@ -49,7 +49,8 @@ export default function ReturnsPolicyPage() {
       <LegalSection title="Refunds">
         <p>
           Once the vendor has received the returned items, Luxora issues the refund for them to your original payment
-          method. The original shipping charge is not refunded for returns.
+          method. The original shipping charge is not refunded for returns. If you used a discount code, the refund is
+          the amount you actually paid for the returned items.
         </p>
       </LegalSection>
 

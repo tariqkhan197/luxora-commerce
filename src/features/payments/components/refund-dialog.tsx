@@ -24,12 +24,16 @@ import { applyActionError } from "@/lib/forms/apply-action-error";
 import { formatMoney } from "@/lib/money";
 import { refundRequestSchema, type RefundRequestInput, type RefundRequestValues } from "@/lib/validation";
 import { refundVendorOrder } from "../admin-actions";
+import { paidForUnits } from "../refund-amounts";
 
 interface RefundableItem {
   id: string;
   productName: string;
   variantTitle: string;
-  unitPriceMinor: number;
+  quantity: number;
+  /** What the customer paid for the whole line (after any discount). */
+  paidMinor: number;
+  refundedQuantity: number;
   refundable: number;
 }
 
@@ -37,6 +41,7 @@ interface RefundDialogProps {
   vendorOrderId: string;
   vendorOrderNumber: string;
   currency: string;
+  /** Shipping the customer paid (after any free-shipping discount). */
   shippingMinor: number;
   items: RefundableItem[];
 }
@@ -63,7 +68,7 @@ export function RefundDialog({ vendorOrderId, vendorOrderNumber, currency, shipp
   const quantities = useWatch({ control: form.control, name: "items" }) ?? [];
   const itemsTotal = items.reduce((sum, item, index) => {
     const quantity = Math.min(Number(quantities[index]?.quantity) || 0, item.refundable);
-    return sum + quantity * item.unitPriceMinor;
+    return sum + paidForUnits(item.paidMinor, item.quantity, item.refundedQuantity, quantity);
   }, 0);
 
   const onSubmit = form.handleSubmit((values) => {
@@ -125,8 +130,8 @@ export function RefundDialog({ vendorOrderId, vendorOrderNumber, currency, shipp
                   <div className="min-w-0 text-sm">
                     <p className="truncate text-ink">{item.productName}</p>
                     <p className="text-xs text-ink-faint">
-                      {item.variantTitle} · {formatMoney(item.unitPriceMinor, currency)} each · {item.refundable}{" "}
-                      refundable
+                      {item.variantTitle} · {formatMoney(item.paidMinor, currency)} paid for {item.quantity} ·{" "}
+                      {item.refundable} refundable
                     </p>
                   </div>
                   <Input

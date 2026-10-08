@@ -11,9 +11,15 @@ import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { clearCart } from "@/features/cart/actions";
 import { CartLineControls } from "@/features/cart/components/cart-line-controls";
-import { getCartLines } from "@/features/cart/queries";
+import { CouponForm } from "@/features/cart/components/coupon-form";
+import { getCartLines, getPromotionQuote } from "@/features/cart/queries";
 import { OrderSummary } from "@/features/checkout/components/order-summary";
-import { buildCheckoutQuote, unavailableLabel } from "@/features/checkout/quote";
+import {
+  buildCheckoutQuote,
+  flashSaleEndsLabel,
+  flashSaleShortLabel,
+  unavailableLabel,
+} from "@/features/checkout/quote";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { formatMoney } from "@/lib/money";
 import { STORAGE_BUCKETS } from "@/lib/storage";
@@ -41,7 +47,8 @@ export default async function CartPage() {
     );
   }
 
-  const quote = buildCheckoutQuote(await getCartLines());
+  const [lines, promotion] = await Promise.all([getCartLines(), getPromotionQuote()]);
+  const quote = buildCheckoutQuote(lines, undefined, promotion);
   const { currency } = quote;
 
   return (
@@ -111,6 +118,7 @@ export default async function CartPage() {
                 <ul className="divide-y divide-line">
                   {group.lines.map((line) => {
                     const issue = unavailableLabel(line);
+                    const saleShort = flashSaleShortLabel(line);
                     return (
                       <li key={line.cartItemId} className="flex gap-4 p-5">
                         <Link href={ROUTES.product(line.productSlug)} className="shrink-0">
@@ -138,8 +146,22 @@ export default async function CartPage() {
                                     .join(" · ")}`
                                 : ""}
                             </p>
-                            <p className="text-xs text-ink-faint">{formatMoney(line.unitPriceMinor, currency)} each</p>
+                            <p className="text-xs text-ink-faint">
+                              {formatMoney(line.unitPriceMinor, currency)} each
+                              {line.onFlashSale && line.listPriceMinor && line.listPriceMinor > line.unitPriceMinor ? (
+                                <span className="ml-2 line-through">{formatMoney(line.listPriceMinor, currency)}</span>
+                              ) : null}
+                            </p>
                             <div className="flex flex-wrap gap-2">
+                              {line.onFlashSale ? (
+                                <Badge variant="accent">Flash sale · {flashSaleEndsLabel(line.flashSaleEndsAt)}</Badge>
+                              ) : null}
+                              {saleShort ? <Badge variant="warning">{saleShort}</Badge> : null}
+                              {line.discount.amountMinor > 0 ? (
+                                <Badge variant="success">
+                                  Code −{formatMoney(line.discount.amountMinor, currency)}
+                                </Badge>
+                              ) : null}
                               {issue ? <Badge variant="danger">{issue}</Badge> : null}
                               {line.priceChanged ? (
                                 <Badge variant="warning">Was {formatMoney(line.addedPriceMinor, currency)}</Badge>
@@ -165,7 +187,16 @@ export default async function CartPage() {
           </div>
 
           <aside className="lg:sticky lg:top-28">
-            <OrderSummary quote={quote}>
+            <OrderSummary
+              quote={quote}
+              coupon={
+                <CouponForm
+                  current={
+                    promotion ? { code: promotion.code, applied: promotion.applied, message: promotion.message } : null
+                  }
+                />
+              }
+            >
               {quote.canCheckout ? (
                 <Button asChild size="lg" className="w-full">
                   <Link href={ROUTES.checkout}>Continue to checkout</Link>

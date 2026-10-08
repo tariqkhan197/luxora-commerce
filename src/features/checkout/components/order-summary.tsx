@@ -5,8 +5,20 @@ import { formatMoney } from "@/lib/money";
 import { deliveryEstimateLabel, type CheckoutQuote } from "../quote";
 
 /** Totals panel shared by the cart and checkout pages. */
-export function OrderSummary({ quote, children }: { quote: CheckoutQuote; children?: React.ReactNode }) {
+export function OrderSummary({
+  quote,
+  children,
+  coupon,
+}: {
+  quote: CheckoutQuote;
+  children?: React.ReactNode;
+  /** The discount-code form (bag page) or nothing. */
+  coupon?: React.ReactNode;
+}) {
   const { currency } = quote;
+  const code = quote.promotion?.applied ? quote.promotion.code : null;
+  const freeShippingPending =
+    quote.promotion?.applied && quote.promotion.discountType === "free_shipping" && !quote.shippingKnown;
   const shippingValue = !quote.shippingKnown
     ? "Calculated at checkout"
     : quote.unshippableGroups.length > 0
@@ -27,6 +39,12 @@ export function OrderSummary({ quote, children }: { quote: CheckoutQuote; childr
           </dt>
           <dd className="tabular-nums">{formatMoney(quote.subtotal.amountMinor, currency)}</dd>
         </div>
+        {quote.discount.amountMinor > 0 ? (
+          <div className="flex justify-between gap-4 text-success">
+            <dt>Discount{code ? ` (${code})` : ""}</dt>
+            <dd className="tabular-nums">−{formatMoney(quote.discount.amountMinor, currency)}</dd>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-4">
           <dt className="text-ink-soft">Shipping</dt>
           <dd className={quote.shippingKnown ? "tabular-nums" : "text-right text-ink-soft"}>{shippingValue}</dd>
@@ -41,6 +59,18 @@ export function OrderSummary({ quote, children }: { quote: CheckoutQuote; childr
               </div>
             ))
           : null}
+        {quote.shippingDiscount.amountMinor > 0 ? (
+          <div className="flex justify-between gap-4 text-success">
+            <dt>Free shipping{code ? ` (${code})` : ""}</dt>
+            <dd className="tabular-nums">−{formatMoney(quote.shippingDiscount.amountMinor, currency)}</dd>
+          </div>
+        ) : null}
+        {freeShippingPending ? (
+          <div className="flex justify-between gap-4 text-xs text-success">
+            <dt>Free shipping{code ? ` (${code})` : ""}</dt>
+            <dd>Applied at checkout</dd>
+          </div>
+        ) : null}
         {deliveryLabel ? (
           <div className="flex justify-between gap-4 text-xs text-ink-faint">
             <dt>Estimated delivery</dt>
@@ -52,6 +82,7 @@ export function OrderSummary({ quote, children }: { quote: CheckoutQuote; childr
           <dd className="font-display text-xl tabular-nums">{formatMoney(quote.total.amountMinor, currency)}</dd>
         </div>
       </dl>
+      {coupon}
       <p className="text-xs leading-relaxed text-ink-soft">
         {DUTIES_AND_TAXES_NOTICE}{" "}
         <Link href={ROUTES.legal.shipping} className="underline underline-offset-4">

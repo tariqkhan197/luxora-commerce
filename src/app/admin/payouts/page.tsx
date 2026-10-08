@@ -23,6 +23,8 @@ const PLATFORM_LABELS: Record<string, string> = {
   dispute_loss: "Disputed payments",
   dispute_fee: "Dispute fees",
   dispute_recovered: "Disputes recovered",
+  promotion_cost: "Luxora-funded promotions",
+  promotion_cost_reversed: "Promotions recovered on refunds",
   adjustment: "Adjustments",
 };
 

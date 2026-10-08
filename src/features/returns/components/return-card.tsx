@@ -4,6 +4,7 @@ import { ReturnStatusBadge } from "@/components/shared/status-badge";
 import { ROUTES } from "@/config/routes";
 import { formatDateTimeUtc } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
+import { paidForUnits } from "@/features/payments/refund-amounts";
 import { cancelReturn } from "../actions";
 import type { ReturnRequestRow } from "../queries";
 import { ReturnStepDialog } from "./return-step-dialog";
@@ -78,7 +79,10 @@ export function ReturnCard({ ret, viewer, canManage = false, canRefund = false }
             </span>
             {item.order_items ? (
               <span className="text-ink-soft tabular-nums">
-                {formatMoney(item.order_items.unit_price_minor * item.quantity, currency)}
+                {formatMoney(
+                  paidForUnits(item.order_items.total_minor, item.order_items.quantity, 0, item.quantity),
+                  currency,
+                )}
               </span>
             ) : null}
           </li>

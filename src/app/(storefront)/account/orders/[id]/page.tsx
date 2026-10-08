@@ -141,10 +141,22 @@ export default async function OrderDetailPage({ params, searchParams }: PageProp
                   <dt className="text-ink-soft">Subtotal</dt>
                   <dd className="tabular-nums">{formatMoney(order.subtotal_minor, order.currency)}</dd>
                 </div>
+                {order.discount_minor > 0 ? (
+                  <div className="flex justify-between text-success">
+                    <dt>Discount{order.coupon_code ? ` (${order.coupon_code})` : ""}</dt>
+                    <dd className="tabular-nums">−{formatMoney(order.discount_minor, order.currency)}</dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <dt className="text-ink-soft">Shipping</dt>
                   <dd className="tabular-nums">{formatMoney(order.shipping_minor, order.currency)}</dd>
                 </div>
+                {order.shipping_discount_minor > 0 ? (
+                  <div className="flex justify-between text-success">
+                    <dt>Free shipping{order.coupon_code ? ` (${order.coupon_code})` : ""}</dt>
+                    <dd className="tabular-nums">−{formatMoney(order.shipping_discount_minor, order.currency)}</dd>
+                  </div>
+                ) : null}
                 {order.tax_minor > 0 ? (
                   <div className="flex justify-between">
                     <dt className="text-ink-soft">Tax</dt>

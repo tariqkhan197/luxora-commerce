@@ -12,6 +12,7 @@ import {
   TicketPercent,
   Truck,
   Users,
+  Zap,
 } from "lucide-react";
 import { navItem, PortalShell } from "@/components/layout/portal-shell";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ const NAV = [
   navItem("Customers", ROUTES.vendor.customers, Users),
   navItem("Analytics", ROUTES.vendor.analytics, BarChart3),
   navItem("Coupons", ROUTES.vendor.coupons, TicketPercent),
+  navItem("Flash sales", ROUTES.vendor.flashSales, Zap),
   navItem("Storefront", ROUTES.vendor.storefront, Store),
   navItem("Payouts", ROUTES.vendor.payouts, Receipt),
   navItem("Settings", ROUTES.vendor.settings, Settings),
