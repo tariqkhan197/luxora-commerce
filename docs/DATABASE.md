@@ -44,6 +44,7 @@ PostgreSQL (Supabase). Migrations in `supabase/migrations/`, applied in filename
 | `20261010000022_reviews`                     | Verified-purchase reviews with pre-moderation, photos, vendor replies; `product_review_stats` totals; review writes function-only; `product_listings` gains `review_count`/`rating_sum`; review photo storage policies  |
 | `20261011000023_promotion_enums`             | `promotion_cost` / `promotion_cost_reversed` ledger types, `coupon_usage_status`                                                                                                                                        |
 | `20261011000024_promotions`                  | Coupons and flash sales: flash prices in `cart_lines()` and catalog views, code evaluation and allocation, funding columns on orders, reservations, refunds of paid amounts, management functions, function-only writes |
+| `20261012000025_operations_insights`         | Commission rules written only through audited functions (overlaps refused) and `explain_commission_rate`; `set_account_status` and audited direct status edits; admin and vendor reporting functions; reporting indexes |
 
 ## Entity relationships
 
@@ -98,10 +99,14 @@ refunds: commission_reversed + vendor_debit ≤ amount                          
 
 1. Active `commission_rules` row with `scope = 'vendor'`
 2. `vendors.commission_rate_bps` override
-3. Active `scope = 'category'` rule, walking up `categories.parent_id`
-4. `categories.commission_rate_bps` on that path
-5. Active `scope = 'global'` rule
-6. `platform_settings['commission.default_bps']` (seeded at 1500 = 15 %)
+3. Walking up `categories.parent_id` from the product's category, at each level: an active `scope = 'category'`
+   rule, then that category's own `categories.commission_rate_bps`
+4. Active `scope = 'global'` rule
+5. `platform_settings['commission.default_bps']` (seeded at 1500 = 15 %)
+
+Since Phase 7, active rules for the same target cannot overlap in time, so at most one applies. Rules are written
+only through `save_commission_rule` / `set_commission_rule_active` (admins, audited); `explain_commission_rate`
+returns the rate and which step supplied it. Orders keep the rate snapshot taken at checkout.
 
 ## Inventory
 
@@ -325,6 +330,37 @@ Unpaid orders release their code use and sale units in `release_order_reservatio
 cancellation, failed payment). Paid orders mark the use `redeemed` and post `promotion_cost`; refunds and returns
 never restore uses or units. `request_refund` refunds what was paid for the units (cumulative split of the line's
 paid total) and only the shipping the customer paid. All writes are audited (`coupon.*`, `flash_sale.*`).
+
+## Operations and insights (Phase 7)
+
+| Function                                                                | Caller               | Effect                                                                                                    |
+| ----------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `save_commission_rule(...)` / `set_commission_rule_active(id, on)`      | admin                | Global, category or vendor rule; overlapping active rules for one target refused; audited                 |
+| `explain_commission_rate(vendor, category)`                             | admin                | Current rate and its source (`vendor_rule`, `vendor_override`, `category_rule`, …)                        |
+| `set_account_status(profile, status, reason)`                           | admin                | Suspend/reactivate **customer** accounts; reason required; `account.suspended/reactivated`                |
+| `admin_sales_summary` / `admin_sales_daily` / `admin_revenue_breakdown` | admin                | Platform figures for a UTC date range (≤ 366 days)                                                        |
+| `admin_top_vendors` / `admin_top_products` / `admin_discount_usage`     | admin                | Rankings and discounts by who funded them                                                                 |
+| `admin_customers(search, status, profile, limit, offset)`               | admin                | Customer directory with email, paid orders, spend net of refunds, return requests                         |
+| `vendor_sales_summary` / `vendor_sales_daily` / `vendor_top_products`   | vendor member, admin | The vendor's own figures                                                                                  |
+| `vendor_customers(vendor, search, limit, offset)`                       | vendor member, admin | Name and city/country from the latest shipping address, orders, net spend, last order — no email or phone |
+
+Report definitions (all dates UTC; a range covers whole days):
+
+- **Paid order:** `confirmed_at` set (only `confirm_order_payment` sets it) and payment status paid, partially
+  refunded or refunded; dated by `confirmed_at`. Unpaid, cancelled and expired orders never count; a late
+  payment for an already-cancelled order is refunded and does not count either.
+- **Gross sales:** `orders.total_minor` of paid orders (after discounts, including shipping). **Refunds:**
+  completed refunds of paid orders, dated by `processed_at`. **Net sales** = gross − refunds in the same range.
+- **AOV** = gross sales ÷ paid orders (half-up). **New customers:** first paid order in the range. **Return
+  rate** = units in return requests opened in the range (not cancelled or rejected) ÷ units sold in the range.
+- **Luxora net revenue:** sum of `platform_ledger_entries` created in the range (commission, reversals, fees,
+  refund losses, disputes, Luxora-funded promotions); `admin_revenue_breakdown` lists it by entry type.
+- **Vendor sales:** `vendor_orders.total + platform_funded` (before Luxora-funded discounts); **earnings:** vendor
+  ledger `order_earning + fee_adjustment + refund_debit` created in the range (payouts and manual adjustments
+  excluded).
+
+Status changes made by editing `profiles` directly (allowed to admins since Phase 1) are audited as
+`account.status_changed`. `analytics_events` has no writer yet, so no report uses it.
 
 ## Audit log
 

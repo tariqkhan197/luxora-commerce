@@ -825,6 +825,13 @@ export type Database = {
             referencedRelation: "orders";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "coupon_usages_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
+            referencedColumns: ["id"];
+          },
         ];
       };
       coupons: {
@@ -1411,6 +1418,13 @@ export type Database = {
             referencedRelation: "orders";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "loyalty_transactions_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
+            referencedColumns: ["id"];
+          },
         ];
       };
       notifications: {
@@ -1559,6 +1573,13 @@ export type Database = {
             columns: ["order_id"];
             isOneToOne: false;
             referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
             referencedColumns: ["id"];
           },
           {
@@ -1776,6 +1797,13 @@ export type Database = {
             referencedRelation: "orders";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "payment_attempts_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
+            referencedColumns: ["id"];
+          },
         ];
       };
       payment_customers: {
@@ -1859,6 +1887,13 @@ export type Database = {
             columns: ["order_id"];
             isOneToOne: false;
             referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_disputes_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
             referencedColumns: ["id"];
           },
           {
@@ -2023,6 +2058,13 @@ export type Database = {
             columns: ["order_id"];
             isOneToOne: false;
             referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payments_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
             referencedColumns: ["id"];
           },
         ];
@@ -2222,6 +2264,13 @@ export type Database = {
             columns: ["order_id"];
             isOneToOne: false;
             referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_ledger_entries_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
             referencedColumns: ["id"];
           },
           {
@@ -2761,6 +2810,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "refunds_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "refunds_payment_id_fkey";
             columns: ["payment_id"];
             isOneToOne: false;
@@ -2947,6 +3003,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "return_requests_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "return_requests_received_by_fkey";
             columns: ["received_by"];
             isOneToOne: false;
@@ -3047,6 +3110,13 @@ export type Database = {
             columns: ["order_id"];
             isOneToOne: false;
             referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "returns_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
             referencedColumns: ["id"];
           },
           {
@@ -3682,6 +3752,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "vendor_orders_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "report_paid_orders";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "vendor_orders_vendor_id_fkey";
             columns: ["vendor_id"];
             isOneToOne: false;
@@ -4152,6 +4229,45 @@ export type Database = {
           },
         ];
       };
+      report_paid_orders: {
+        Row: {
+          confirmed_at: string | null;
+          coupon_id: string | null;
+          customer_id: string | null;
+          id: string | null;
+          total_minor: number | null;
+        };
+        Insert: {
+          confirmed_at?: string | null;
+          coupon_id?: string | null;
+          customer_id?: string | null;
+          id?: string | null;
+          total_minor?: number | null;
+        };
+        Update: {
+          confirmed_at?: string | null;
+          coupon_id?: string | null;
+          customer_id?: string | null;
+          id?: string | null;
+          total_minor?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey";
+            columns: ["coupon_id"];
+            isOneToOne: false;
+            referencedRelation: "coupons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       vendor_balances: {
         Row: {
           available_minor: number | null;
@@ -4254,7 +4370,67 @@ export type Database = {
         Args: { p_amount_minor: number; p_reason: string; p_vendor_id: string };
         Returns: undefined;
       };
+      admin_customers: {
+        Args: {
+          p_limit?: number;
+          p_offset?: number;
+          p_profile_id?: string;
+          p_search?: string;
+          p_status?: Database["public"]["Enums"]["account_status"];
+        };
+        Returns: {
+          email: string;
+          full_name: string;
+          joined_at: string;
+          paid_orders: number;
+          profile_id: string;
+          return_requests: number;
+          spent_minor: number;
+          status: Database["public"]["Enums"]["account_status"];
+          total_count: number;
+        }[];
+      };
       admin_disable_flash_sale: { Args: { p_reason: string; p_sale_id: string }; Returns: undefined };
+      admin_discount_usage: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          flash_sale_savings_minor: number;
+          luxora_funded_minor: number;
+          orders_with_code: number;
+          vendor_code_minor: number;
+        }[];
+      };
+      admin_revenue_breakdown: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          amount_minor: number;
+          entries: number;
+          entry_type: string;
+        }[];
+      };
+      admin_sales_daily: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          day: string;
+          gross_sales_minor: number;
+          paid_orders: number;
+          refunds_minor: number;
+        }[];
+      };
+      admin_sales_summary: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          average_order_value_minor: number;
+          gross_sales_minor: number;
+          luxora_net_revenue_minor: number;
+          net_sales_minor: number;
+          new_customers: number;
+          paid_orders: number;
+          refunds_minor: number;
+          returned_units: number;
+          units: number;
+        }[];
+      };
       admin_save_shipping_zone: {
         Args: {
           p_countries: string[];
@@ -4269,6 +4445,26 @@ export type Database = {
       admin_set_coupon_disabled: {
         Args: { p_coupon_id: string; p_disabled: boolean; p_reason?: string };
         Returns: undefined;
+      };
+      admin_top_products: {
+        Args: { p_from: string; p_limit?: number; p_to: string };
+        Returns: {
+          product_id: string;
+          product_name: string;
+          sales_minor: number;
+          units: number;
+          vendor_name: string;
+        }[];
+      };
+      admin_top_vendors: {
+        Args: { p_from: string; p_limit?: number; p_to: string };
+        Returns: {
+          commission_minor: number;
+          paid_orders: number;
+          sales_minor: number;
+          vendor_id: string;
+          vendor_name: string;
+        }[];
       };
       allocate_minor_internal: { Args: { p_amount: number; p_weights: number[] }; Returns: number[] };
       allocate_payment_fee_internal: { Args: { p_fee_minor: number; p_order_id: string }; Returns: undefined };
@@ -4298,6 +4494,7 @@ export type Database = {
       };
       assert_payment_mode: { Args: { p_livemode: boolean }; Returns: undefined };
       assert_platform_caller: { Args: Record<PropertyKey, never>; Returns: undefined };
+      assert_report_access_internal: { Args: { p_vendor_id: string }; Returns: undefined };
       assert_review_content_internal: {
         Args: { p_body: string; p_rating: number; p_title: string };
         Returns: undefined;
@@ -4426,6 +4623,17 @@ export type Database = {
       };
       clear_cart: { Args: Record<PropertyKey, never>; Returns: undefined };
       close_payment_attempt: { Args: { p_session_id: string }; Returns: undefined };
+      commission_rule_overlaps_internal: {
+        Args: {
+          p_category_id: string;
+          p_ends_at: string;
+          p_rule_id: string;
+          p_scope: Database["public"]["Enums"]["commission_rule_scope"];
+          p_starts_at: string;
+          p_vendor_id: string;
+        };
+        Returns: string;
+      };
       commit_reserved_inventory: {
         Args: { p_quantity: number; p_reference_id: string; p_variant_id: string };
         Returns: {
@@ -4480,6 +4688,15 @@ export type Database = {
       end_flash_sale: { Args: { p_sale_id: string }; Returns: undefined };
       expire_payment_attempt: { Args: { p_session_id: string }; Returns: string };
       expire_stale_checkouts: { Args: { p_variant_ids?: string[] }; Returns: number };
+      explain_commission_rate: {
+        Args: { p_category_id?: string; p_vendor_id: string };
+        Returns: {
+          category_id: string;
+          rate_bps: number;
+          rule_id: string;
+          source: string;
+        }[];
+      };
       fail_payment_attempt: { Args: { p_reason: string; p_session_id: string }; Returns: string };
       fail_refund: { Args: { p_message: string; p_refund_id: string }; Returns: undefined };
       finish_webhook_event: {
@@ -4724,6 +4941,13 @@ export type Database = {
       remove_review_image: { Args: { p_image_id: string }; Returns: string };
       remove_review_reply: { Args: { p_review_id: string }; Returns: undefined };
       reply_to_review: { Args: { p_reply: string; p_review_id: string }; Returns: undefined };
+      report_range_internal: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          ends_at: string;
+          starts_at: string;
+        }[];
+      };
       request_refund: {
         Args: {
           p_include_shipping?: boolean;
@@ -4814,6 +5038,19 @@ export type Database = {
       review_is_public: { Args: { p_review_id: string }; Returns: boolean };
       review_max_images: { Args: Record<PropertyKey, never>; Returns: number };
       review_window_days: { Args: Record<PropertyKey, never>; Returns: number };
+      save_commission_rule: {
+        Args: {
+          p_category_id: string;
+          p_ends_at: string;
+          p_name: string;
+          p_rate_bps: number;
+          p_rule_id: string;
+          p_scope: Database["public"]["Enums"]["commission_rule_scope"];
+          p_starts_at: string;
+          p_vendor_id: string;
+        };
+        Returns: string;
+      };
       save_coupon: {
         Args: {
           p_code: string;
@@ -4843,8 +5080,13 @@ export type Database = {
         };
         Returns: string;
       };
+      set_account_status: {
+        Args: { p_profile_id: string; p_reason: string; p_status: Database["public"]["Enums"]["account_status"] };
+        Returns: undefined;
+      };
       set_cart_item_quantity: { Args: { p_cart_item_id: string; p_quantity: number }; Returns: number };
       set_category_active: { Args: { p_active: boolean; p_category_id: string }; Returns: number };
+      set_commission_rule_active: { Args: { p_active: boolean; p_rule_id: string }; Returns: undefined };
       set_coupon_active: { Args: { p_active: boolean; p_coupon_id: string }; Returns: undefined };
       set_flash_sale_items: { Args: { p_items: Json; p_sale_id: string }; Returns: number };
       set_vendor_status: {
@@ -4920,7 +5162,53 @@ export type Database = {
         Args: { p_body: string; p_rating: number; p_review_id: string; p_title: string };
         Returns: undefined;
       };
+      vendor_customers: {
+        Args: { p_limit?: number; p_offset?: number; p_search?: string; p_vendor_id: string };
+        Returns: {
+          city: string;
+          country_code: string;
+          customer_key: string;
+          customer_name: string;
+          last_order_at: string;
+          paid_orders: number;
+          spent_minor: number;
+          total_count: number;
+        }[];
+      };
       vendor_order_vendor_id: { Args: { p_vendor_order_id: string }; Returns: string };
+      vendor_sales_daily: {
+        Args: { p_from: string; p_to: string; p_vendor_id: string };
+        Returns: {
+          day: string;
+          paid_orders: number;
+          sales_minor: number;
+        }[];
+      };
+      vendor_sales_summary: {
+        Args: { p_from: string; p_to: string; p_vendor_id: string };
+        Returns: {
+          commission_minor: number;
+          customer_paid_minor: number;
+          earnings_minor: number;
+          paid_orders: number;
+          rating_sum: number;
+          refunds_minor: number;
+          return_requests: number;
+          returned_units: number;
+          review_count: number;
+          sales_minor: number;
+          units: number;
+        }[];
+      };
+      vendor_top_products: {
+        Args: { p_from: string; p_limit?: number; p_to: string; p_vendor_id: string };
+        Returns: {
+          product_id: string;
+          product_name: string;
+          sales_minor: number;
+          units: number;
+        }[];
+      };
       wishlist_is_public: { Args: { p_wishlist_id: string }; Returns: boolean };
       wishlist_owner_profile_id: { Args: { p_wishlist_id: string }; Returns: string };
     };
