@@ -181,11 +181,12 @@ and the database (RLS policies + triggers). Only the database layer is authorita
 | 5 ✅  | Customer returns (RMA): request within 14 days of delivery, vendor approval with return instructions, return tracking, receipt with restock, admin refund through Stripe (test mode)              |
 | 6A ✅ | Product reviews and ratings: verified buyers within 30 days of delivery, admin pre-moderation, up to 4 photos, one vendor reply, rating totals on product pages and cards                         |
 | 6B ✅ | Promotions: Luxora and vendor discount codes, vendor flash sales, exact discount allocation, funding-aware commission, ledgers, refunds and Stripe test-mode discounts                            |
-| 7     | Subscriptions, featured placements, analytics, content management, loyalty, notifications                                                                                                         |
+| 7 ✅  | Operations and insights: audited commission rules with precedence preview, customer suspension, admin and vendor analytics (UTC), vendor customers, audit log, settings                           |
+| 8     | Subscriptions, featured placements, content management, loyalty, notifications                                                                                                                    |
 
 ## Status
 
-Phases 1–3, Release 4a, Phase 4b, Phase 5 and Phases 6A–6B are complete and verified (`npm run check`). The application is **not
+Phases 1–3, Release 4a, Phase 4b, Phase 5, Phases 6A–6B and Phase 7 are complete and verified (`npm run check`). The application is **not
 production-ready**: payments run in Stripe **test mode only** (live keys and live events are refused); tax is not
 collected (checkout states "Duties and taxes may apply on delivery."); and the company details on the legal pages
 are placeholders (see below).
@@ -334,3 +335,32 @@ Full runbook: [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
   cumulatively, so refunding every unit returns it exactly). Only shipping the customer paid is refundable.
 - **Stripe (test mode).** The checkout session lists items at the price charged per unit and carries the order's
   discount as a one-time Stripe coupon; shipping is charged after any free-shipping discount.
+
+### Phase 7 workflows (operations and insights)
+
+- **Commission rules** (`/admin/commissions`). Rules target all products, a category (and its subcategories) or a
+  vendor, with a rate and dates (UTC). They are written only through `save_commission_rule` /
+  `set_commission_rule_active`, which check the caller is an administrator, refuse two active rules for the same
+  target with overlapping dates, and record every change in the audit log. The rate for a new order is the first
+  match of: vendor rule → the vendor's own rate → for the product's category and then each parent: category rule,
+  then the category's own rate → global rule → the platform default (`commission.default_bps`). The page previews
+  this for any vendor and category. Orders keep the rate they were placed with; changes are never retroactive.
+- **Customers** (`/admin/customers`, `/admin/customers/[id]`). Customer accounts with paid orders, spend net of
+  completed refunds and return requests; each customer's page lists recent orders, returns, refunds, reviews and
+  account history. Administrators can suspend or reactivate a customer account with a required reason and an
+  explicit confirmation (`set_account_status`, audited, customer accounts only). A suspended customer cannot sign
+  in, check out, pay, request returns or write reviews (enforced in the database); their existing orders, returns,
+  refunds and reviews are untouched.
+- **Analytics** (`/admin/analytics`, `/vendor/analytics`). Last 7, 30 or 90 days or a custom range of up to 366
+  days, in UTC, each compared with the preceding period of the same length. Figures come from database functions
+  that check the caller (administrators; vendor members only for their own vendor); definitions are in
+  `docs/DATABASE.md`. Charts are server-rendered SVG with a table view; there is no chart library and no export.
+- **Vendor customers** (`/vendor/customers`). Customers with a paid order from the vendor: name, shipping city and
+  country, paid orders, amount spent with that vendor (net of refunds) and last order date. Email addresses and
+  phone numbers are never shown to vendors.
+- **Audit log** (`/admin/audit-logs`) is read-only, filterable by action (or action prefix), entity, actor and UTC
+  dates; metadata is shown as text. **Settings** (`/admin/settings`) are read-only here; values under
+  credential-like keys are redacted (no secrets are stored in `platform_settings`).
+- **Known limits.** Refunds are counted in the period they completed, not the period of the original sale. The
+  average rating on vendor analytics covers all approved reviews (all time). Vendor analytics are visible to every
+  member of the vendor, like vendor orders.

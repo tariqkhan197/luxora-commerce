@@ -39,7 +39,7 @@ const optionalCount = z.preprocess(
 );
 
 /** `<input type="datetime-local">` value, interpreted as UTC. */
-const optionalDateTime = optionalText(
+export const optionalDateTime = optionalText(
   z
     .string()
     .trim()

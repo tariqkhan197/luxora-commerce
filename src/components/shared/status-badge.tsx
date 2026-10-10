@@ -124,3 +124,13 @@ const REVIEW_LABEL: Record<Enums<"review_status">, string> = {
 export function ReviewStatusBadge({ status }: { status: Enums<"review_status"> }) {
   return <Badge variant={REVIEW[status]}>{REVIEW_LABEL[status]}</Badge>;
 }
+
+const ACCOUNT: Record<Enums<"account_status">, Variant> = {
+  active: "success",
+  suspended: "danger",
+  deactivated: "neutral",
+};
+
+export function AccountStatusBadge({ status }: { status: Enums<"account_status"> }) {
+  return <Badge variant={ACCOUNT[status]}>{label(status)}</Badge>;
+}
